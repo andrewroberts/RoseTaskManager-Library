@@ -21,8 +21,15 @@
  * =========
  */
 
-// Version 1.5
+// Version 1.5.1
 // -------------
+
+// * Ignore missing Timestamp column
+// * Add trace for where the "not from Task List" columns come from
+
+
+// Version 1.5
+// -----------
 
 // * Use Firebase for production logging - BBLog
 

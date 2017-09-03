@@ -234,7 +234,7 @@ createTrigger: function() {
   
   // TODO - Change time according to calendar timezone, see getCalendarTime()
   
-  if (CREATE_TRIGGERS) {
+  if (!TEST_BLOCK_TRIGGERS) {
     
     var triggerId = ScriptApp.newTrigger('onCalendarTrigger')
       .timeBased()

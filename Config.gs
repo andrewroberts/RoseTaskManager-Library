@@ -11,7 +11,7 @@
 /*
  * This file is part of Rose Task Manager.
  *
- * Copyright (C) 2015 Andrew Roberts
+ * Copyright (C) 2014 - 2017 Andrew Roberts
  * 
  * This program is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -27,7 +27,7 @@
  */
   
 /**
- * config.gs
+ * Config.gs
  * =========
  *
  * Internal configuration settings.
@@ -50,7 +50,7 @@
 // ======
 
 var SCRIPT_NAME = 'Rose Task Manager'
-var SCRIPT_VERSION = 'v1.5'
+var SCRIPT_VERSION = 'v1.5.1'
 
 var REGULAR_TASK_CALENDAR_NAME = SCRIPT_NAME
 
@@ -81,14 +81,16 @@ var OPTOUT_OF_ANALYTICS = false
 // -------
 
 // Can't do this when testing the add-on
-var CREATE_TRIGGERS = true
+var TEST_BLOCK_TRIGGERS             = false
 
-// Don't need to force 'email status'as easy to trigger.
-var FORCE_INSTALL_ERROR        = false
-var FORCE_OPEN_ERROR           = false
-var FORCE_FORMSUBMIT_ERROR     = false
-var FORCE_EDIT_ERROR           = false
-var FORCE_CLOCKTRIGGER_ERROR   = false
+// Don't need to force 'email status' as easy to trigger.
+var TEST_FORCE_INSTALL_ERROR        = false
+var TEST_FORCE_OPEN_ERROR           = false
+var TEST_FORCE_FORMSUBMIT_ERROR     = false
+var TEST_FORCE_EDIT_ERROR           = false
+var TEST_FORCE_CLOCKTRIGGER_ERROR   = false
+
+var TEST_BLOCK_EMAILS               = false
 
 // Constants/Enums
 // ===============
@@ -160,6 +162,7 @@ var FORM_BODY_TEMPLATE = "AUTO-RESPONSE. \n\nNew task #${\"id\"} - \"${\"title\"
 // TODO - Look at a consistent way of keeping the TimeStamp cell renamed
 
 var SS_COL_TIMESTAMP     = "Timestamp"
+var SS_COL_LISTED        = "Listed"
 var SS_COL_STARTED       = "Started"
 var SS_COL_CLOSED        = "Closed"
 var SS_COL_ID            = "ID"

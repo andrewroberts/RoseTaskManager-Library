@@ -366,7 +366,7 @@ function onInstall_() {
   var properties = PropertiesService.getDocumentProperties()
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet()    
   
-  if (FORCE_INSTALL_ERROR) {
+  if (TEST_FORCE_INSTALL_ERROR) {
     throw new Error('Force onInstall() error for testing.')
   }
   
@@ -439,7 +439,7 @@ function onInstall_() {
       }
     })
 
-    if (CREATE_TRIGGERS) {
+    if (!TEST_BLOCK_TRIGGERS) {
 
       ScriptApp
         .newTrigger('onFormSubmit')
@@ -481,7 +481,6 @@ function onInstall_() {
 
     // Rename the timestamp column. This is done before the 
     // wait on the response sheet as it'll be used again in the wait
-//    taskListSheet.getRange('A1').setValue(SS_COL_LISTED)
 
     // Wait 30s for the responses sheet created by the form to be completed 
     // before updating the task list sheet.
@@ -745,7 +744,7 @@ function onOpen_(event) {
   Log_.functionEntryPoint('event: ' + JSON.stringify(event))
   var functionName = 'onOpen_()'
   
-  if (FORCE_OPEN_ERROR) {
+  if (TEST_FORCE_OPEN_ERROR) {
     throw new Error('Force onOpen() error for testing.')
   }
 
@@ -810,63 +809,6 @@ function onOpen_(event) {
     
 } // onOpen_()
 
-/**
- * Sort by status and priority
- */
-
-// TODO - Remove these
-
-/*
-
-function onSortByPriortity_() {
-  
-  Log_.functionEntryPoint()
-  
-  if (FORCE_SORTBYPRIORITY_ERROR) {
-    throw new Error('Force onSortByPriortity() error for testing.')
-  }
-  
-  Utils_.postAnalytics('onSortByPriortity')
-  
-  var sheet = SpreadsheetApp
-    .getActiveSpreadsheet()
-    .getSheetByName(TASK_LIST_WORK_SHEET_NAME)
-  
-  var priorityIndex = Utils_.getColumnPosition(sheet, SS_COL_PRIORITY)
-  
-  // Sort the sheet by Status
-  sheet.sort(priorityIndex, false)
-    
-  return true
-
-} // onSortByPriortity_
-*/
-/**
- * Sort the sheet by ID
- */
-/* 
-function onSortById_() {
-  
-  Log_.functionEntryPoint()
-  var functionName = 'onSortById_()'
-  
-  if (FORCE_SORTBYID_ERROR) {
-    throw new Error('Force onSortById() error for testing.')
-  }
-  
-  Utils_.postAnalytics(functionName)
-  
-  var sheet = SpreadsheetApp
-    .getActiveSpreadsheet()
-    .getSheetByName(TASK_LIST_WORK_SHEET_NAME)
-  
-  var idIndex = Utils_.getColumnPosition(sheet, SS_COL_ID)
-  
-  // Sort the sheet by date
-  sheet.sort(idIndex, true)
-
-} // onSortById_()
-*/
 /** 
  * Send an email status update
  */
@@ -948,16 +890,19 @@ function onEmailStatusUpdates_() {
   var bodyTemplate = STATUS_BODY_TEMPLATE
   var bodyData = {row:id, title:title, status:status}
   var body = Utils_.fillInTemplateFromObject(bodyTemplate, bodyData)
-  
-  MailApp.sendEmail(userEmail, 
-                    subject, 
-                    body, 
-                    {name:SCRIPT_NAME, cc:Utils_.getListAdminEmail()})
-  
-  Log_.info(
-    "Email status sent to email: " + userEmail +
-    "\n\nsubject: " + subject +
-    "\n\nbody: " + body)
+
+  if (!TEST_BLOCK_EMAILS) {
+
+    MailApp.sendEmail(userEmail, 
+                      subject, 
+                      body, 
+                      {name:SCRIPT_NAME, cc:Utils_.getListAdminEmail()})
+    
+    Log_.info(
+      "Email status sent to email: " + userEmail +
+      "\n\nsubject: " + subject +
+      "\n\nbody: " + body)
+  }
   
   Dialog.show(SCRIPT_NAME, 'Status email sent to ' + userEmail, 90)
         
@@ -988,7 +933,7 @@ function onFormSubmit_(event) {
   Log_.functionEntryPoint()
   var functionName = 'onFormSubmit_()'
   
-  if (FORCE_FORMSUBMIT_ERROR) {    
+  if (TEST_FORCE_FORMSUBMIT_ERROR) {    
     throw new Error('Force onEmailStatusUpdates() error for testing.')
   }
     
@@ -996,66 +941,36 @@ function onFormSubmit_(event) {
   
   var taskListSheet = event.range.getSheet()
   
-  if (taskListSheet.getName() !== TASK_LIST_WORK_SHEET_NAME) { 
-    Log_.warning('Form submission did not come from "' + TASK_LIST_WORK_SHEET_NAME + '"')
+  if (taskListSheet.getName() !== TASK_LIST_WORK_SHEET_NAME) {
+  
+    Log_.warning(
+      'Form submission did not come from "' + TASK_LIST_WORK_SHEET_NAME + '", ' + 
+        'but "' + taskListSheet.getName() + '"')
+        
     return
   }
-  
-  // Rename the timestamp column header
-  //    Utils_.setCellValue(taskListSheet, 1, SS_COL_TIMESTAMP, SS_COL_LISTED)
   
   var allRows = taskListSheet.getDataRange().getValues()
   
   var columnIndex = {
     id: getColumnIndex(SS_COL_ID),
-    timestamp: getColumnIndex(SS_COL_TIMESTAMP),
+    timestamp: getColumnIndex(SS_COL_TIMESTAMP, false),
     started: getColumnIndex(SS_COL_STARTED),
     closed: getColumnIndex(SS_COL_CLOSED),
     title: getColumnIndex(SS_COL_TITLE),
     status: getColumnIndex(SS_COL_STATUS),
     email: getColumnIndex(SS_COL_CONTACT_EMAIL)
   }
-  
-  var maxColumns = allRows[0].length
-  
-  // Get a unique task id and store it in the spreadsheet. Read in all 
-  // of the sheet, find the highest ID number used so far then starting 
-  // from the last row work work up to find the last empty ID cell, then 
-  // work down filling in each empty cell with a unique ID. This feels a bit
-  // convoluted but allows for multiple form responses being written between
-  // calls to this function, and avoids having to go elsewhere, like a 
-  // script property, to get the index which has its own issues.
-  
-  var ids = ArrayLib.transpose(allRows)[columnIndex.id].filter(function(id) {
     
-    return typeof id === 'number'
-  })
+  var nextIdObject = getNextId()
   
-  var maxId = ids.length > 0 ? Math.max.apply(null, ids) : 1
+  var nextId = nextIdObject.nextId
+  var rowIndex = nextIdObject.rowIndex
+  var maxRowIndex = nextIdObject.maxRowIndex
+  var lastRowIndexWithId = nextIdObject.lastRowIndexWithId
   
-  var maxRowIndex = allRows.length - 1
-  var lastRowIndexWithId = 0
-  var nextId
-  var rowIndex = maxRowIndex
-  
-  // Work backwards to find the last row with an ID
-  for (; rowIndex >= 1; rowIndex--) {
-    
-    nextId = allRows[rowIndex][columnIndex.id]
-    
-    if (typeof nextId === 'number') {
-      
-      lastRowIndexWithId = rowIndex
-      break
-    }
-  }
-  
-  // Step forward again into the empty id
-  rowIndex++
-    
   var countUpdatedRows = 0
-  nextId = maxId + 1
-  
+    
   Log_.fine('Before processing rows, rowIndex: ' + rowIndex)
   
   // Now process the new rows
@@ -1067,61 +982,64 @@ function onFormSubmit_(event) {
     allRows[rowIndex][columnIndex.id] = nextId
     countUpdatedRows++
       
-      Log_.fine('set row id to ' + nextId)
+    Log_.fine('set row id to ' + nextId)
       
-      allRows[rowIndex][columnIndex.status] = STATUS_NEW
+    allRows[rowIndex][columnIndex.status] = STATUS_NEW
       
-      // Update timestamp formatting
-      // ---------------------------
-      //
-      // Get the column numbers of the three timestamp values and update 
-      // their formatting
-      
+    // Update timestamp formatting
+    // ---------------------------
+    //
+    // Get the column numbers of the three timestamp values and update 
+    // their formatting
+    
+    if (columnIndex.timestamp !== -1) {
+    
       taskListSheet
-      .getRange(rowIndex + 1, columnIndex.timestamp + 1)
-      .setNumberFormat(DATE_TIME_FORMAT)
-      
-      taskListSheet
+        .getRange(rowIndex + 1, columnIndex.timestamp + 1)
+        .setNumberFormat(DATE_TIME_FORMAT)
+    }
+    
+    taskListSheet
       .getRange(rowIndex + 1, columnIndex.started + 1)
       .setNumberFormat(DATE_TIME_FORMAT)
-      
-      taskListSheet
+    
+    taskListSheet
       .getRange(rowIndex + 1, columnIndex.closed + 1)
       .setNumberFormat(DATE_TIME_FORMAT)
+    
+    // Construct and send the response email to user
+    // ---------------------------------------------
+    
+    var title = allRows[rowIndex][columnIndex.title]
+    
+    // TODO - Get template from sheet - need to review fillTemplate first,
+    // looks like there could be overlap or it's too generic
+    
+    var subject = Utils_.fillInTemplateFromObject(
+      FORM_SUBJECT_TEMPLATE, 
+      {id:nextId, title:title})    
+    
+    var body = Utils_.fillInTemplateFromObject(
+      FORM_BODY_TEMPLATE, 
+      {id:nextId, title:title})
+    
+    var email = allRows[rowIndex][columnIndex.email]
+    
+    var options = {}
+    
+    if (email.indexOf('@') === -1) {
       
-      // Construct and send the response email to user
-      // ---------------------------------------------
+      Log_.warning('no email sent to user, invalid address: ' + email)            
       
-      var title = allRows[rowIndex][columnIndex.title]
+      // No user email address
+      email = Utils_.getListAdminEmail()
+      options.name = SCRIPT_NAME
+      body += '\n\nNO EMAIL SENT TO USER as no valid email address found.'
       
-      // TODO - Get template from sheet - need to review fillTemplate first,
-      // looks like there could be overlap or it's too generic
+    } else {
       
-      var subject = Utils_.fillInTemplateFromObject(
-        FORM_SUBJECT_TEMPLATE, 
-        {id:nextId, title:title})    
-      
-      var body = Utils_.fillInTemplateFromObject(
-        FORM_BODY_TEMPLATE, 
-        {id:nextId, title:title})
-      
-      var email = allRows[rowIndex][columnIndex.email]
-      
-      var options = {}
-      
-      if (email.indexOf('@') === -1) {
-        
-        Log_.warning('no email sent to user, invalid address: ' + email)            
-        
-        // No user email address
-        email = Utils_.getListAdminEmail()
-        options.name = SCRIPT_NAME
-        body += '\n\nNO EMAIL SENT TO USER as no valid email address found.'
-        
-      } else {
-        
-        options = {name:SCRIPT_NAME, cc:Utils_.getListAdminEmail()}
-      }
+      options = {name:SCRIPT_NAME, cc:Utils_.getListAdminEmail()}
+    }
     
     MailApp.sendEmail(email, subject, body, options)
     
@@ -1136,6 +1054,8 @@ function onFormSubmit_(event) {
   
   // and finally write the updated rows back to the sheet
   
+  var maxColumns = allRows[0].length 
+    
   Log_.fine(
     'lastRowIndexWithId: ' + lastRowIndexWithId + ', ' +
     'countUpdatedRows: ' + countUpdatedRows + ', ' +
@@ -1166,24 +1086,99 @@ function onFormSubmit_(event) {
   /**
     * Get the index (0-based) of this column
     *
-    * @param {string} name
+    * @param {string} columnName
+    * @param {booleand} required [OPTIONAL, DEFAULT = true]
+    *
+    * @return {number} column index or -1
     */
   
-  function getColumnIndex(ColumnName) {
+  function getColumnIndex(columnName, required) {
     
-    Log_.functionEntryPoint()
-    var columnIndex = allRows[0].indexOf(ColumnName)
+    Log_.functionEntryPoint('columnName: ' + columnName + ', required: ' + required)
+    var callingfunction = 'onFormSubmit_.getColumnIndex()'
+    required = (typeof required === 'undefined') ? true : false
     
-    Assert.assert(
-      columnIndex >= 0, 
-      'Can not find the "' + ColumnName + '" column in the "' + 
-      TASK_LIST_WORK_SHEET_NAME + '" tab. This is required by the Rose Task ' + 
-      'Manager add-on, could it have been renamed?')
+    var columnIndex = allRows[0].indexOf(columnName)
+    Log_.fine('columnIndex: ' + columnIndex)
+
+    if (columnIndex === -1 && columnName === SS_COL_TIMESTAMP) {
+        
+      // There may have been an old version where it was renamed to "Listed"
+      columnIndex = allRows[0].indexOf(SS_COL_LISTED)
+    }
+
+    if (columnIndex === -1) {
+
+      if (required) {
+  
+        Assert.assert(
+          false, 
+          callingfunction,
+          'Can not find the "' + columnName + '" column in the "' + 
+            TASK_LIST_WORK_SHEET_NAME + '" tab. This is required by the add-on, ' + 
+            'check it\'s not been renamed? Did find: ' + JSON.stringify(allRows[0]))
+          
+      } else {
       
+        Log_.warning('No "' + columnName + '" column. Found: ' + JSON.stringify(allRows[0]))
+      }
+    }
+    
     return columnIndex
     
-  } // getColumnIndex()
+  } // onFormSubmit_.getColumnIndex()
+
+  /**
+   * @return {number} the next ID to use or null
+   */
+
+  function getNextId() {
+  
+    Log_.functionEntryPoint()
+  
+    // Get a unique task id and store it in the spreadsheet. Read in all 
+    // of the sheet, find the highest ID number used so far then starting 
+    // from the last row work work up to find the last empty ID cell, then 
+    // work down filling in each empty cell with a unique ID. This feels a bit
+    // convoluted but allows for multiple form responses being written between
+    // calls to this function, and avoids having to go elsewhere, like a 
+    // script property, to get the index which has its own issues.
     
+    var ids = ArrayLib.transpose(allRows)[columnIndex.id].filter(function(id) {  
+      return typeof id === 'number'
+    })
+    
+    var maxId = (ids.length > 0) ? Math.max.apply(null, ids) : 1
+    
+    var maxRowIndex = allRows.length - 1
+    var lastRowIndexWithId = 0
+    var nextId
+    var rowIndex = maxRowIndex
+    
+    // Work backwards to find the last row with an ID
+    for (; rowIndex >= 1; rowIndex--) {
+      
+      nextId = allRows[rowIndex][columnIndex.id]
+      
+      if (typeof nextId === 'number') {
+        
+        lastRowIndexWithId = rowIndex
+        break
+      }
+    }
+    
+    // Step forward again into the empty id
+    rowIndex++
+      
+    return {
+      nextId: maxId + 1,
+      rowIndex: rowIndex,
+      maxRowIndex: maxRowIndex,
+      lastRowIndexWithId: lastRowIndexWithId,
+    }
+  
+  } // onFormSubmit_.getNextId()
+
 } // onFormSubmit_()
 
 /**
@@ -1195,7 +1190,7 @@ function onEdit_(event) {
   Log_.functionEntryPoint()
   var functionName = 'onEdit_()'
   
-  if (FORCE_EDIT_ERROR) {    
+  if (TEST_FORCE_EDIT_ERROR) {    
     throw new Error('Force onEdit() error for testing.')
   }
   
@@ -1206,8 +1201,7 @@ function onEdit_(event) {
   var range = event.source.getActiveRange()
   
   if (sheet.getName() !== TASK_LIST_WORK_SHEET_NAME) {
-    
-    Log_.warning('Not in "' + TASK_LIST_WORK_SHEET_NAME + '" sheet')
+    Log_.warning('Ignoring edit: not in "' + TASK_LIST_WORK_SHEET_NAME + '" sheet')
     return
   }
   
