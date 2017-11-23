@@ -21,12 +21,23 @@
  * =========
  */
 
+// Version 1.6
+// -----------
+
+// * Removed analytics (that wasn't used anymore)
+// * Add sidebar
+// * Use GMail draft for emails (in Sidebar > Settings)
+// * Add "About" to sidebar
+// * Email notifications "from" configurable from Settings
+// * Replace calendar trigger log with event count
+// * Use calendar ID rather than name (so the name can be changed and RTM 
+//   will still find it
+
 // Version 1.5.1
 // -------------
 
 // * Ignore missing Timestamp column
 // * Add trace for where the "not from Task List" columns come from
-
 
 // Version 1.5
 // -----------

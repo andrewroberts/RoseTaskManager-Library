@@ -29,22 +29,6 @@
 var Utils_ = {
 
 /**
- * Send a notification to my Universal Analytics account.
- */
- 
-postAnalytics: function(msg) {
-  
-  Log_.functionEntryPoint()
-
-  if (!DISABLE_ANALYTICS) {
-    if (UA) {
-      UA.postAppView(msg)
-    }
-  }
-
-}, // Utils_.postAnalytics()
-
-/**
  * Get the email address of the user that authorised the script.
  */
  
@@ -57,77 +41,135 @@ getListAdminEmail: function() {
   
 }, // Utils_.getListAdminEmail()
 
-/** 
- * Find the column index of the field with this name.
+/**
+ * Get the index (0-based) of this column
  *
- * @param {Object} sheet (not required if headerValues defined)
- * @param {String} column name
- * @param {Array} headerValues (not required if sheet defined)
+ * First check if we can get it from column meta data, if not look in 
+ * the header row for the column name
  *
- * @return {number} column 1-based index or -1
+ * @param {Object} 
+ *   {Sheet} sheet
+ *   {string} columnName
+ *   {Array} headers [OPTIONAL, DEFAULT - got from row 1]
+ *   {boolean} required [OPTIONAL, DEFAULT = true]
+ *   {Boolean} useMeta [OPTIONAL, DEFAULT = true]
+ *
+ * @return {number} column index or -1
  */
-
-getColumnPosition: function (sheet, columnName, headerValues) {
-
-  Log_.functionEntryPoint()
+  
+getColumnIndex: function(config) {
     
-  if (typeof headerValues === 'undefined') {
-    headerValues = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+  Log_.functionEntryPoint()
+  
+  var sheet = config.sheet
+  var columnName = config.columnName
+  var headers = config.headers
+  
+  var required
+  
+  if (typeof config.required === 'undefined' || config.required) {
+    required = true
+  } else {
+    required = false
   }
   
-  for (var colIndex = 0; colIndex < headerValues.length; colIndex++) {
+  var useMeta
+  
+  if (typeof config.useMeta === 'undefined' || config.useMeta) {
+    useMeta = true
+  } else {
+    useMeta = false
+  }
+
+  Log_.fine('columnName: %s', columnName)
+  Log_.fine('headers: %s', headers)
+  Log_.fine('required: %s', required)
+  Log_.fine('useMeta: %s', useMeta)
+  
+  var columnIndex = -1
+  
+  if (useMeta) {
+  
+    // First check if we can get it from column meta data
+    columnIndex = MetaData_.getColumnIndex(sheet, columnName)
+  }
+  
+  if (columnIndex === -1) {
     
-    var nextName = headerValues[colIndex]
+    if (typeof headers === 'undefined') {
+      headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+    }
     
-    if (nextName === columnName) {
+    columnIndex = headers.indexOf(columnName)
+    
+    if (columnIndex === -1 && columnName === TASK_LIST_COLUMNS.TIMESTAMP) {
       
-      Log_.fine(
-        "Column '" + columnName + "' " + 
-          'has position ' + (colIndex + 1) + ' ' +
-          "in sheet '" + sheet.getName() + "'")
+      // There may have been an old version where it was renamed to "Listed"
+      columnIndex = headers.indexOf("Listed")
+    }
+    
+    if (columnIndex !== -1) { 
+    
+      if (useMeta) {
+    
+        // Store meta data for this column in case it does get moved or renamed
+        MetaData_.add(sheet, columnName, columnIndex) 
+      }
       
-      // Return the column position 1-based as this is what's used by
-      // SpreadsheetApp
-      return colIndex + 1      
+      Log_.fine('columnIndex from headers: ' + columnIndex) 
     }
   }
   
-  Log_.warning(
-    "Column '" + columnName + "' " + 
-      "not found in sheet '" + sheet.getName() + "'")
+  if (columnIndex === -1) {
+    
+    if (required) {
+      
+      Utils_.throwNoColumnError(columnName, headers)
+      
+    } else {
+      
+      Log_.warning('No "' + columnName + '" column. Found: ' + JSON.stringify(headers))
+    }
+  }
   
-  return -1
+  return columnIndex
   
-}, // Utils_.getColumnPosition()
+}, // Utils_.getColumnIndex()
 
 /**
  * Set the value of a spreadsheet cell.
  *
  * @param {object} sheet
- * @param {number} rowIndex
- * @param {string} column name
- * @param {any} value
+ * @param {number} rowNumber
+ * @param {string} columnName
+ * @param {object} value
+ * @param {Boolean} useMeta 
+ * @param {Boolean} required  
  */
 
-setCellValue: function (sheet, rowIndex, columnName, value) {
+setCellValue: function (sheet, rowNumber, columnName, value, useMeta, required) {
   
   Log_.functionEntryPoint()
   
-  var colIndex = this.getColumnPosition(sheet, columnName)
+  var columnIndex = Utils_.getColumnIndex({
+    sheet: sheet, 
+    columnName: columnName,
+    useMeta: useMeta,
+    required: required})
   
-  if (colIndex === -1) {
-    
-    Log_.warning("Could not find column: " + columnName)
-    
-  } else {
+  if (columnIndex !== -1) {
 
-    sheet.getRange(rowIndex, colIndex).setValue(value)
+    sheet.getRange(rowNumber, columnIndex + 1).setValue(value)
+    
+    Log_.info('Stored ' + value + ' in row ' + rowNumber)
     
     Log_.fine(
       'Wrote value ' + value + ' ' +
-        'to sheet ' + sheet.getName() + ' ' +
-        'rowIndex: ' + rowIndex + ', ' + 
-        'columnName: ' + columnName)
+        'rowNumber: ' + rowNumber + ', ' + 
+        'columnName: ' + columnName,
+        'columnIndex: ' + columnIndex + ' ' +
+        'useMeta:' + useMeta + ' ' +
+        'required:' + required)       
   }
     
 }, // Utils_.setCellValue()
@@ -136,165 +178,47 @@ setCellValue: function (sheet, rowIndex, columnName, value) {
  * Get the value of a spreadhsheet cell
  *
  * @param {object} sheet
- * @param {number} rowIndex
- * @param {string} column name
- * @return {any} value or null
+ * @param {number} rowNumber
+ * @param {string} columnName
+ * @param {Boolean} useMeta
+ * @param {Boolean} required 
+ *
+ * @return {object} value or null
  */
 
-getCellValue: function(sheet, rowIndex, columnName) {
+getCellValue: function(sheet, rowNumber, columnName, useMeta, required) {
   
   Log_.functionEntryPoint()
   
-  var columnIndex = this.getColumnPosition(sheet, columnName)
+  Log_.fine('rowNumber: ' + rowNumber)
+  Log_.fine('columnName: ' + columnName)
+  Log_.fine('useMeta: ' + useMeta)
+  Log_.fine('required: ' + required)
+  
+  var columnIndex = Utils_.getColumnIndex({
+    sheet: sheet, 
+    columnName: columnName,
+    useMeta: useMeta,
+    required: required})
+    
   var value = null
   
-  if (columnIndex === -1) {
+  if (columnIndex !== -1) {
     
-    Log_.warning("setCellValue_", "Could not find column: " + columnName)
-   
-  } else {
-  
-    value = sheet.getRange(rowIndex, columnIndex).getValue()
+    value = sheet.getRange(rowNumber, columnIndex + 1).getValue()
     
     Log_.fine(
       'Got ' + value + ', ' +
-        'from sheet: ' + sheet.getName() + ' ' +
-        'rowIndex: ' + rowIndex + ' ' +
-          'columnName: ' + columnName)
+        'rowNumber: ' + rowNumber + ' ' +
+        'columnName: ' + columnName + ' ' + 
+        'columnIndex: ' + columnIndex + ' ' +
+        'useMeta:' + useMeta + ' ' +
+        'required:' + required)
   }
     
   return value    
   
 }, // Utils_.getCellValue()
-
-// Replaces markers in a template string with values define in a JavaScript data object.
-//
-// @param {string} template string containing markers, for instance ${"Column name"}
-// @param {object} data: JavaScript object with values to that will replace markers. For instance
-//                       data.columnName will replace marker ${"Column name"}
-//
-// @return {string} a string without markers. If no data is found to replace a marker, it is
-//                  simply removed.
-//
-
-fillInTemplateFromObject: function(template, data) {
-  
-  Log_.finest("fillInTemplateFromObject", "data: " + data + " template: " + template)
-  
-  var complete = template
-  
-  // Search for all the variables to be replaced, for instance ${"Column name"}
-  var templateVars = template.match(/\$\{\"[^\"]+\"\}/g)
-
-  // Replace variables from the template with the actual values from the data object.
-  // If no value is available, replace with the empty string
-  for (var i = 0; i < templateVars.length; ++i) {
-    
-    // normalizeHeader ignores ${"} so we can call it directly here
-    var variableData = data[normalizeHeader(templateVars[i])]
-    
-    if (variableData instanceof Date) {
-      
-      // This is a Date (it has the method anyway!) so convert it
-      // to a nicer string
-      variableData = variableData.toDateString()
-    }
-    
-    complete = complete.replace(templateVars[i], variableData || "")
-  }
-
-  return complete
-  
-  // Private Functions
-  // -----------------
-  
-  // Normalizes a string, by removing all alphanumeric characters and using mixed case
-  // to separate words. The output will always start with a lower case letter.
-  // This function is designed to produce JavaScript object property names.
-  //
-  // @param {string} header String to normalize
-  //
-  // @return 
-  
-  function normalizeHeader(header) {
-  
-    var key = ''
-    var upperCase = false
-  
-    for (var i = 0; i < header.length; ++i) {
-  
-      var letter = header[i]
-  
-      if (letter === " " && key.length > 0) {
-        upperCase = true
-        continue
-      }
-  
-      if (!isAlnum(letter)) {
-        continue
-      }
-  
-      if (key.length == 0 && isDigit(letter)) {
-        continue // first character must be a letter
-      }
-  
-      if (upperCase) {
-  
-        upperCase = false
-        key += letter.toUpperCase()
-  
-      } else {
-  
-        key += letter.toLowerCase()
-      }
-    }
-  
-    return key
-    
-    // Private Functions
-    // -----------------
-    
-    // Returns true if the cell where cellData was read from is empty
-    //
-    // @param {string} cellData
-    //
-    // @return {boolean} result
-    
-    function isCellEmpty(cellData) {
-    
-      return typeof(cellData) === 'string' && cellData === ''
-      
-    } // fillInTemplateFromObject.normalizeHeader.isCellEmpty()
-    
-    // Returns true if the character char is alphabetical, false otherwise
-    //
-    // @param {string} char
-    //
-    // @return {boolean} result
-    
-    function isAlnum(char) {
-    
-      return char >= 'A' && char <= 'Z' ||
-        char >= 'a' && char <= 'z' ||
-        isDigit(char)
-    
-    } // fillInTemplateFromObject.normalizeHeader.isAlnum()
-    
-    // Returns true if the character char is a digit, false otherwise
-    //
-    // @param {string} char
-    //
-    // @return {boolean} result
-    
-    function isDigit(char) {
-    
-      return char >= '0' && char <= '9'
-    
-    } // fillInTemplateFromObject.normalizeHeader.isDigit()
-    
-  } // fillInTemplateFromObject.normalizeHeader()
-  
-}, // Utils_.fillInTemplateFromObject()
 
 /**
  * checkIfAuthorizationRequired
@@ -398,12 +322,211 @@ toast: function(message) {
   Log_.functionEntryPoint()
   
   var spreadsheet = SpreadsheetApp.getActive()
-  var DISPLAY_FOREVER = -1
+//  var DISPLAY_FOREVER = -1
   
   if (spreadsheet !== null) {
-    spreadsheet.toast(message, SCRIPT_NAME, DISPLAY_FOREVER)
+    spreadsheet.toast(message, SCRIPT_NAME)
   }
 
-} // Utils_.toast()
+}, // Utils_.toast()
+
+/**
+ * Throw "no column" error
+ *
+ * @param {String} columnName
+ * @param {Array} row
+ * 
+ * @return {Object} 
+ */
+ 
+throwNoColumnError: function(columnName, row) {
+  
+  Log_.functionEntryPoint()
+
+  throw new Error('Can not find the "' + columnName + '" column in the "' + 
+    TASK_LIST_WORK_SHEET_NAME + '" tab. This is required by the add-on, ' + 
+    'check it\'s not been renamed? Did find: ' + JSON.stringify(row)) + '. ' +
+    'Consider using a custom email template, with placeholders that match the new ' + 
+    'headers: Add-ons > Rose Task Manager > Settings'
+  
+}, // Utils_.throwNoColumnError()
+
+/**
+ * Send email
+ *
+ * @param {String} recipient
+ * @param {String} subject
+ * @param {String} plainBody
+ * @param {Object} options
+ * @param {String} logMessage
+ *
+ * @return {Boolean} email sent or not
+ */
+ 
+sendEmail: function(recipient, subject, plainBody, options, logMessage) {
+  
+  Log_.functionEntryPoint()
+  
+  Log_.fine('recipient: ' + recipient)
+  Log_.fine('subject: ' + subject)
+  Log_.fine('plainBody: ' + plainBody)
+  
+  if (options.hasOwnProperty('htmlBody')) {
+    Log_.fine('htmlBody: ' + options.htmlBody)
+  }
+    
+  if (options.hasOwnProperty('cc')) {
+    Log_.fine('cc: ' + options.cc)
+  }
+    
+  if (TEST_BLOCK_EMAILS) {
+  
+    Log_.warning('Email sending disabled')
+    return false
+    
+  } else {
+  
+    var quota = MailApp.getRemainingDailyQuota()
+    
+    if (quota === 0) {
+    
+      throw new Error('You do not have any quota left for sending email')
+    
+    } else {
+    
+      Log_.fine('Email quota: ' + quota)
+      MailApp.sendEmail(recipient, subject, plainBody, options)
+      Log_.info(logMessage)
+      return true
+    }
+  }
+
+}, // Utils_.sendEmail()
+
+/**
+ * Set a setting to a new value
+ *
+ * @param {String} propertyName
+ * @param {Object} newValue
+ */
+ 
+setSetting: function(propertyName, newValue) {
+  
+  Log_.functionEntryPoint()
+  var properties = PropertiesService.getDocumentProperties()
+  var oldValue = properties.getProperty(propertyName)
+  properties.setProperty(propertyName, newValue)
+  Log_.fine('Replaced ' + propertyName + ' value: "' + oldValue + '" with "' + newValue + '"')
+ 
+}, // Utils_.setSetting()
+
+/**
+ * Get the email templates
+ *
+ * @param {String} propertyName
+ * @param {String} defaultSubjectTemplate
+ * @param {String} defaultBodyTemplate
+ * 
+ * @return {Object} templates
+ */
+ 
+getEmailTemplates: function(propertyName, defaultSubjectTemplate, defaultBodyTemplate) {
+  
+  Log_.functionEntryPoint()
+
+  var draft = null
+  var subjectTemplate
+  var htmlBodyTemplate
+  var plainBodyTemplate
+
+  var templateSubject = PropertiesService
+    .getDocumentProperties()
+    .getProperty(propertyName)
+   
+  if (templateSubject === null || templateSubject === DEFAULT_DRAFT_TEXT) {
+  
+    Log_.info('Email template not available (' + propertyName + '), using default')
+    subjectTemplate = defaultSubjectTemplate
+    htmlBodyTemplate = ''
+    plainBodyTemplate = defaultBodyTemplate
+    
+  } else {
+  
+    GmailApp.getDraftMessages().some(function(nextDraft) {
+      if (nextDraft.getSubject() === templateSubject) {
+        draft = nextDraft
+        return true
+      }
+    })
+  
+    if (draft === null) {
+    
+      Log_.warning('Could not find the GMail draft (' + propertyName + ') so using default')
+      subjectTemplate = defaultSubjectTemplate
+      htmlBodyTemplate = ''
+      plainBodyTemplate = defaultBodyTemplate  
+      
+    } else {
+  
+      subjectTemplate = draft.getSubject()
+      htmlBodyTemplate = draft.getBody()
+      plainBodyTemplate = draft.getPlainBody()
+    }
+  }
+  
+  return {
+    subject: subjectTemplate,
+    htmlBody: htmlBodyTemplate,
+    plainBody: plainBodyTemplate
+  }
+
+}, // Utils_.getEmailTemplates()
+
+/**
+ * For each placeholder - "{{[placeholder]}}", strip out any HTML and replace 
+ * it with the appropriate key value:
+ * 
+ * E.g. If the object were:
+ *
+ * {PlaceHolder1: newValue}
+ *
+ * In the template "{{PlaceHolder1}}" would be replaced with "newValue" even
+ * if there were some HTML (<...>) inside the brackets.
+ *
+ * https://github.com/shantanu543/bulk-mail/blob/master/bulkmail.gs
+ * 
+ * @param {String} template HTML or plain text
+ * @param {Object} rowObject replacement values: {[placeholder]: [new value]}
+ *
+ * @return {String} completed template
+ */
+  
+fillInTemplate: function (template, rowObject) {
+  
+  Log_.functionEntryPoint()
+  Log_.fine('template: ' + template)
+  Log_.fine('rowObject: ' + JSON.stringify(rowObject))
+  
+  var completed = template.replace(/{{.*?}}/g, function(nextMatch) {
+  
+    Log_.fine('nextMatch: ' + nextMatch)
+    
+    // Remove any HTML inside the placeholder
+    var placeholderValue = nextMatch.replace(/<.*?>/g, '')
+    Log_.fine('placeholderValue (HTML stripped): ' + placeholderValue)
+    
+    // Strip the placeholder identifier
+    placeholderValue = placeholderValue.substring(2, placeholderValue.length - 2)
+    Log_.fine('placeholderValue (ids removed): ' + placeholderValue)
+    
+    var nextValue = rowObject[placeholderValue] || ''
+    Log_.fine('nextValue: ' + nextValue)
+    
+    return nextValue
+  })
+
+  return completed
+
+}, // Utils_.fillInTemplate()
 
 } // Utils_

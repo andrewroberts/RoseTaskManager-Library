@@ -25,35 +25,93 @@
  * =======
  */
 
-function test(arg) {
-
-/*
-{
-  "year":2017,"month":5,"day-of-month":8,"day-of-week":1,"week-of-year":19,"hour":20,"minute":58,"second":8,"timezone":"UTC",
-  "authMode":{},
-  "triggerUid":765510647
+function test_init() {
+  Log_ = {
+    functionEntryPoint: function(msg) {Logger.log(msg)},
+    fine: function(msg) {Logger.log(msg)},
+    finer: function(msg) {Logger.log(msg)},
+    finest: function(msg) {Logger.log(msg)},
+    warning: function(msg) {Logger.log(msg)},
+  }
 }
-*/
 
-  Logger.log('arg: ' + JSON.stringify(arg))
+function test() {
+  test_init()
+  var a
+  var config = {a:a}
+  if (typeof config.a === 'undefined') throw 'STOP'  
+  return
+}
+
+function test_regex1(arg) {
+  test_init()
+  var TEMPLATE = "a {{<a1234 - pretend HTML>1}} 2 3"
+  // "\\<[^\\]]*\\>"
+  // /{{[\w\s\d]+}}/g
+  var a = TEMPLATE.match(/{{.*?}}/g)
+  var b = a[0].replace(/<.*?>/g, '')
+  return
+}
+
+// Settings Sidebar
+// ----------------
+//
+// http://www.mcpher.com/Home/excelquirks/addons/addonsettings
+
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('Sidebar')
+}
+
+// Emails_
+// =======
+
+function fillInTemplate() {
+
+  var headerRow = ['P1', 'P2', 'P3']
+  var activeRow = ['a', 'b', 'c']
+  var rowObject = {}
   
-  if (arg.hasOwnProperty('triggerUid')) {
-    Logger.log('Found trigger id')
-  } else {
-    Logger.log('Not found trigger id')  
+  for (var columnIndex = 0; columnIndex < headerRow.length; columnIndex++) {
+    rowObject[headerRow[columnIndex]] = activeRow[columnIndex]
   }
   
+  var TEMPLATE = 'Test - {{P1}} - {{P2}} - {{P1}}'
+  var result = ''
+  var REGEX = /{{[\w\s\d]+}}/g
+  
+  result = TEMPLATE.replace(REGEX, replacer) 
+  
+  return
+
+  function replacer (nextMatch) {
+    var placeholderValue = nextMatch.substring(2, nextMatch.length - 2)
+    return rowObject[placeholderValue]
+  }
+
+/*  
+    result = TEMPLATE.replace(REGEX, )    
+*/  
+  
+/*
+  for (var columnIndex = 0; columnIndex < headerRow.length; columnIndex++) {
+    
+    var header = headerRow[columnIndex]
+    var nextValue = activeRow[columnIndex]
+    
+    result = TEMPLATE.replace(REGEX, function (nextMatch) {
+      var label = nextMatch.substring(2, nextMatch.length - 2)
+      return nextValue
+    })    
+  }
+*/
+
+
+
   return
 }
 
-function test_form() {
-//  var FORM_ID = '1STSQ_naOdVpzi5EMgzpdsLQM0-PIXLaRJNFPdBlWNz4'
-//  var destId = FormApp.openById(FORM_ID).getDestinationId()
-  
-  var formUrl = SpreadsheetApp.openById('1aHLHuph3-CkgMjGjx-NhxyKRmzF95OPLUUbUJs9Zxgg').getFormUrl()
-  var formId = FormApp.openByUrl(formUrl).getId()
-  return
-}
+// Auth
+// ====
 
 function test_auth() {
   var authInfo = ScriptApp.getAuthorizationInfo(ScriptApp.AuthMode.FULL)
@@ -63,11 +121,10 @@ function test_auth() {
   }
   var url = authInfo.getAuthorizationUrl()
   return
-}
+} 
 
-function createDummyFormId () {
-  PropertiesService.getScriptProperties().setProperty(PROPERTIES_FORM_ID, '999')
-}
+// Dump Config
+// ===========
 
 function logConfig() {
 
@@ -116,6 +173,8 @@ function logConfig() {
   
 } // logConfig()
 
+// Unit Tests
+// ==========
 
 // TODO - Lots of test code to write!!
 
@@ -506,7 +565,7 @@ function onClearConfig_() {
   } else {
     Log_.info('  None')
   }
-  
+ 
   Log_.info('Delete Local NPT User Properties:')    
   if (PropertiesService.getUserProperties() !== null) {  
     Log_.info(PropertiesService.getUserProperties().deleteAllProperties())

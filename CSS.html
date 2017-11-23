@@ -1,0 +1,175 @@
+<style>
+
+html,body {
+  height: 100%;
+  margin:0;
+  font-family: 'Noto Sans', sans-serif;
+}
+
+#content-wrapper {
+  height:500px;
+  width:300px;
+  display:block;
+  margin: 0 auto;
+}
+
+#dicearea {
+  width:272px;
+  height:92%;
+  min-height:360px;
+}
+
+#page-data-content {
+  height:84%;
+}
+
+#container {
+  height:100%;
+}
+
+#about-dicers {
+
+}
+
+#stripe-pay {
+
+}
+
+.diceable {
+  padding: 4px;
+  position:absolute;
+  overflow: auto;
+}
+
+
+.front {
+  z-index:10; 
+}
+
+.ontop {
+  z-index:12;
+}
+
+.dicer-icon-disabled {
+  color:#EEEEEE;
+}
+
+.dicer-quiet {
+  border-radius: 4px;
+  display:block;
+  width:98%;
+  background-color:#CFD8DC;
+  margin:2px;
+  padding:2px;
+  border: 1px solid #BDBDBD;
+  font-size:.8em;
+  color:#212121;
+  overflow:hidden;
+  white-space: nowrap;
+}
+.dicer-quiet:hover {
+  background-color:#FFECB3;
+  cursor:pointer;
+}
+.dicer-selected {
+  background-color:#BBDEFB;
+}
+.dicer-unselected {
+  background-color:#FFFFFF;
+}
+.tooltip {
+  position:absolute;
+  z-index:20;
+  background-color:#FFEBEE;
+  padding-left:4px;
+  padding-right:4px;
+  font-size:.8em;
+  top:0px;
+  left:0px;
+}
+.clickable-icon {
+  cursor:pointer;
+}
+.dicer-caption {
+  width:50%;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+
+
+.button-place {
+  bottom: 0;
+  position: fixed;
+  height:80px;
+  display: block;
+  overflow: hidden;
+}
+
+.button-item {
+  margin-bottom:14px;
+  margin-right:8px;
+  display:inline-block;
+}
+
+.notification {
+  bottom: 0;
+  position: fixed;
+  z-index:99;
+  
+  width:100%;
+  min-height:80px;
+
+  display: block;
+  overflow: hidden;
+
+}
+
+.notification-toast-header {
+   color: #ffffff;
+   background-color:#FFA000;
+}
+.notification-toast-message {
+   color: #212121;
+   background-color: #FFECB3;
+}
+.notification-error-header {
+   color: #ffffff;
+   background-color: #D32F2F;
+}
+.notification-error-message {
+   color: #212121;
+   background-color: #FFECB3;
+}
+.notification-header {
+   position:relative;
+   min-height: 26px;
+   padding:2px;
+}
+
+.notification-header-content {
+    width:90%;
+    font-weight:bold;
+}
+
+.notification-message {
+    min-height:54px;
+    padding-left:4px;
+    padding-right:4px;
+    padding-top:2px;
+    padding-bottom:2px;
+}
+
+.padding {
+   height:16px;
+   display:block;
+}
+
+.footer {
+  z-index:100;
+  position:absolute;
+  top:95%;
+  left:30%;
+}
+
+</style>

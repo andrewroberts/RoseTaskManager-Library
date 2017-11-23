@@ -50,7 +50,7 @@
 // ======
 
 var SCRIPT_NAME = 'Rose Task Manager'
-var SCRIPT_VERSION = 'v1.5.1'
+var SCRIPT_VERSION = 'v1.6 (Dev)'
 
 var REGULAR_TASK_CALENDAR_NAME = SCRIPT_NAME
 
@@ -67,33 +67,43 @@ var DEBUG_LOG_DISPLAY_FUNCTION_NAMES = BBLog.DisplayFunctionNames.YES
 
 var DEV_EMAIL_ADDRESS = 'andrewr1969+rtm@gmail.com'
 
-// Analytics
-// ---------
-
-// TODO - Can't run this when I open the script. THe UAMeasure library 
-// has been removed for now. Add-ons already have some analytics builtin.
-var DISABLE_ANALYTICS = true
- 
-// Allow this user to opt out of the anonymous analytics recorded.
-var OPTOUT_OF_ANALYTICS = false
-
 // Testing
 // -------
+//
+// Should all be false in production
 
-// Can't do this when testing the add-on
-var TEST_BLOCK_TRIGGERS             = false
-
-// Don't need to force 'email status' as easy to trigger.
+var TEST_BLOCK_TRIGGERS             = false // Can't do this when testing the add-on
 var TEST_FORCE_INSTALL_ERROR        = false
 var TEST_FORCE_OPEN_ERROR           = false
 var TEST_FORCE_FORMSUBMIT_ERROR     = false
 var TEST_FORCE_EDIT_ERROR           = false
 var TEST_FORCE_CLOCKTRIGGER_ERROR   = false
-
+var TEST_FORCE_STATUS_SEND_ERROR    = false
 var TEST_BLOCK_EMAILS               = false
+var TEST_FORCE_NO_DRAFTS            = false
+
+if (PRODUCTION_VERSION) {
+
+  if (TEST_BLOCK_TRIGGERS ||
+      TEST_FORCE_INSTALL_ERROR ||
+      TEST_FORCE_OPEN_ERROR ||
+      TEST_FORCE_FORMSUBMIT_ERROR ||
+      TEST_FORCE_EDIT_ERROR ||
+      TEST_FORCE_CLOCKTRIGGER_ERROR ||
+      TEST_FORCE_STATUS_SEND_ERROR ||
+      TEST_BLOCK_EMAILS ||
+      TEST_FORCE_NO_DRAFTS) {
+   
+     throw new Error('Testing flag set in PRODUCTION VERSION')
+  }
+}
+
+var TEST_SPREADSHEET_ID = '1aHLHuph3-CkgMjGjx-NhxyKRmzF95OPLUUbUJs9Zxgg'
 
 // Constants/Enums
 // ===============
+
+var DEFAULT_DRAFT_TEXT = 'Default template'
 
 var REENABLE_CALENDAR_TEXT = 'The "daily calendar check" has been disabled so you will not see this error again.' + 
   'You will need to re-enable it (Add-ons > Rose Task Manager > Start daily calendar check) ' + 
@@ -123,6 +133,15 @@ var DATE_TIME_FORMAT = 'd MMM yyyy HH:mm:ss'
 var ALERT_HEIGHT = 100
 var ALERT_WIDTH = 300
 
+// Errors
+// ------
+
+var ERROR_SELECT_VALID_EMAIL = 'Select a row on the "' + TASK_LIST_WORK_SHEET_NAME + '" ' + 
+    'sheet with a valid email address  and try again.'
+  
+var ERROR_FAILED_TO_SEND_STATUS = SCRIPT_NAME + ' ' + 
+    'Failed to send Status email.'
+  
 // Status Email Update Template
 // ----------------------------
 // 
@@ -131,16 +150,9 @@ var ALERT_WIDTH = 300
 
 // TODO - Make these configurable by moving them to the spreadsheet.
 
-var STATUS_SUBJECT_TEMPLATE = "Task #${\"id\"} - Status Update - \"${\"status\"}\""
+var STATUS_SUBJECT_TEMPLATE = 'Task #{{ID}} - Status Update - {{Status}}'
 
-var STATUS_BODY_TEMPLATE = 
-  "We've updated the status of task #${\"row\"} - ${\"title\"}." + 
-  "\n\nNew Status: ${\"status\"}." + 
-  "\n\n\"1 - New\"  Listed but not yet seen by list admin." + 
-  "\n\"2 - Open\"  Seen by list admin but not being worked on yet." + 
-  "\n\"3 - In Progress\"  Being worked on." + 
-  "\n\"4 - Ignored\"  Has not been completed but has been closed for some other reason (test task request, task superseeded, etc)." + 
-  "\n\"5 - Done\"  Has been completed." 
+var STATUS_BODY_TEMPLATE = 'The present status of task #{{ID}} - "{{Subject}}" is {{Status}}.'
 
 // Form Email Template
 // -------------------
@@ -148,9 +160,10 @@ var STATUS_BODY_TEMPLATE =
 // This is the email notification sent when a form is submitted.
 //
 
-var FORM_SUBJECT_TEMPLATE = "Task #${\"id\"} \"${\"title\"}\" Received"
+var FORM_SUBJECT_TEMPLATE = 'Task #{{ID}} "{{Subject}}" Received'
 
-var FORM_BODY_TEMPLATE = "AUTO-RESPONSE. \n\nNew task #${\"id\"} - \"${\"title\"}\" entered into the" + TASK_LIST_WORK_SHEET_NAME + " sheet."
+var FORM_BODY_TEMPLATE = 'AUTO-RESPONSE. \n\nNew task #{{ID}} - "{{Subject}}" ' + 
+  'entered into the ' + TASK_LIST_WORK_SHEET_NAME + ' sheet.'
 
 // Task List spreadsheet
 // ---------------------
@@ -161,21 +174,25 @@ var FORM_BODY_TEMPLATE = "AUTO-RESPONSE. \n\nNew task #${\"id\"} - \"${\"title\"
 
 // TODO - Look at a consistent way of keeping the TimeStamp cell renamed
 
-var SS_COL_TIMESTAMP     = "Timestamp"
-var SS_COL_LISTED        = "Listed"
-var SS_COL_STARTED       = "Started"
-var SS_COL_CLOSED        = "Closed"
-var SS_COL_ID            = "ID"
-var SS_COL_TITLE         = "Subject"
-var SS_COL_LOCATION      = "Location"
-var SS_COL_PRIORITY      = "Priority"
-var SS_COL_STATUS        = "Status"
-var SS_COL_CATEGORY      = "Category"
-var SS_COL_ASSIGNED_TO   = "Assigned to"
-var SS_COL_REQUESTED_BY  = "Requested by"
-var SS_COL_CONTACT_EMAIL = "Contact email"
-var SS_COL_EVENT_ID      = "Event ID"
-var SS_COL_NOTES         = "Description"
+// !!! This is also the initial order of the headers, so dont change it !!!
+// To avoid language dependence the script assumes the headers, or whatever is 
+// is in another languages, are laid out in this order
+
+var TASK_LIST_COLUMNS = {
+  ID            : "ID",
+  TIMESTAMP     : "Timestamp",
+  STARTED       : "Started",
+  CLOSED        : "Closed",
+  TITLE         : "Subject",
+  LOCATION      : "Location",
+  PRIORITY      : "Priority",
+  STATUS        : "Status",
+  CATEGORY      : "Category",
+  ASSIGNED_TO   : "Assigned to",
+  REQUESTED_BY  : "Requested by",
+  CONTACT_EMAIL : "Contact email",
+  NOTES         : "Description",
+}
 
 var STATUS_NEW         = "1 - New"         // New task/issue raised
 var STATUS_OPEN        = "2 - Open"        // Acknowledged by Admin
@@ -190,31 +207,13 @@ var PRIORITY_HIGH   = "1 - High"
 // Properties
 // ----------
 
-var PROPERTY_LAST_AUTH_EMAIL_DATE = SCRIPT_NAME + ' last auth email date'
-var PROPERTY_CALENDAR_ID          = SCRIPT_NAME + ' calendar id'
-
-// Google Universal Analytics
-// --------------------------
-
-if (!DISABLE_ANALYTICS) {
-
-  var UA_CODE = 'UA-54781593-1'
-  
-  var UA = new cUAMeasure
-    .UAMeasure (
-      UA_CODE, 
-      SCRIPT_NAME, 
-      Session.getEffectiveUser().getEmail(), 
-      OPTOUT_OF_ANALYTICS,
-      SCRIPT_VERSION
-    )
-}                                 
-
-// Trello
-// ------
-
-var TRELLO_BOARD_NAME = SCRIPT_NAME
-var TRELLO_LIST_NAME = 'RTM Test List 1'
+var PROPERTY_LAST_AUTH_EMAIL_DATE   = SCRIPT_NAME + ' last auth email date'
+var PROPERTY_CALENDAR_TRIGGER_ID    = SCRIPT_NAME + ' calendar id' // actually the trigger, but kept with this name for backward compatibility
+var PROPERTY_CALENDAR_ID_NT         = SCRIPT_NAME + ' calendar id (not trigger)'
+var PROPERTY_STATUS_EMAIL           = SCRIPT_NAME + ' status email template'
+var PROPERTY_NEW_TASK_EMAIL         = SCRIPT_NAME + ' new task email template'
+var PROPERTY_EMAIL_FROM             = SCRIPT_NAME + ' email from'
+var PROPERTY_CALENDAR_TRIGGER_COUNT = SCRIPT_NAME + ' calendar trigger count'
 
 // Function Template
 // -----------------

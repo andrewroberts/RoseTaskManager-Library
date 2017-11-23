@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?!= include('CSS') ?>
+    <?!= include('spinner.css') ?>    
+    <?!= include('CDN.css') ?>        
+  </head>
+  <body>  
+    <div class="content-wrapper">
+      <div class="mui-container">    
+        <ul class="mui-tabs__bar mui-tabs__bar--justified">
+          <li class="mui--is-active"><a data-mui-toggle="tab" data-mui-controls="elementer-root">Settings</a></li>
+          <li><a data-mui-toggle="tab" data-mui-controls="about">About</a></li>
+        </ul>      
+        <div class="mui-tabs__pane mui--is-active" id="elementer-root">
+          <br>
+          <div id="elementer-content" style="width:90%"></div> 
+        </div>
+        <div class="mui-tabs__pane" id="about">
+          <br>
+          <?!= include('Help') ?>
+        </div>      
+      </div>
+      <div id="notification-area" class="notification mui--hide">
+        <div class="notification-header">
+          <span id="notification-header" class="notification-header-content"></span>
+          <span id="notification-close" class="mui--pull-right"><i class="mui--text-light material-icons">close</i></span>
+        </div>
+        <div id="notification-message" class="notification-message"></div>
+      </div> 
+      <div class="spinner-container" id="spinner">
+        <svg class="spinner" width="33px" height="33px" viewBox="0 0 35 35" xmlns="http://www.w3.org/2000/svg">
+          <circle class="path" fill="none" stroke-width="4" stroke-linecap="round" cx="17" cy="17" r="15"></circle>
+        </svg>
+      </div>
+      <div class="footer">
+        <a href=http://www.andrewroberts.net>AndrewRoberts.net</a>
+      </div>
+    </div>
+    <?!= include('Ui.js') ?>  
+    <?!= include('Client.js') ?>        
+    <?!= include('Elementer.js') ?>        
+    <?!= include('DomUtils.js') ?>            
+    <?!= include('Utils.js') ?>
+    <?!= include('Provoker.js') ?>                   
+    <?!= include('OnLoad.js') ?>              
+    <?!= include('CDN.js') ?>   
+    <?!= include('App.js') ?>       
+  </body>
+</html>
