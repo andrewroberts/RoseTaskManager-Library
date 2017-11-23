@@ -32,6 +32,8 @@
 // * Replace calendar trigger log with event count
 // * Use calendar ID rather than name (so the name can be changed and RTM 
 //   will still find it
+// * Moved onOpen out of eventHandler_() and removed logging (there were lots
+//   of errors in StackDriver, but I think these were fixed anyway in v1.6
 
 // Version 1.5.1
 // -------------

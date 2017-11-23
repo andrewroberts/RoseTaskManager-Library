@@ -53,13 +53,29 @@ function test_regex1(arg) {
   return
 }
 
-// Settings Sidebar
-// ----------------
-//
-// http://www.mcpher.com/Home/excelquirks/addons/addonsettings
+// MetaData_
+// ---------
 
-function doGet() {
-  return HtmlService.createHtmlOutputFromFile('Sidebar')
+function test_MetaData_get() {
+  test_init()
+  var sheet = SpreadsheetApp.openById('1aHLHuph3-CkgMjGjx-NhxyKRmzF95OPLUUbUJs9Zxgg').getSheetByName('Task List')
+  var a = MetaData_.get(sheet, 'Subject')
+  return
+}
+
+function test_MetaData_getAll() {
+  test_init()
+  var sheet = SpreadsheetApp.openById('1aHLHuph3-CkgMjGjx-NhxyKRmzF95OPLUUbUJs9Zxgg').getSheetByName('Task List')
+  for (var key in TASK_LIST_COLUMNS) {
+    Logger.log(MetaData_.get(sheet, TASK_LIST_COLUMNS[key]))
+  }
+}
+
+function test_MetaData_removeAll() {
+  test_init()
+  var sheet = SpreadsheetApp.openById('1aHLHuph3-CkgMjGjx-NhxyKRmzF95OPLUUbUJs9Zxgg').getSheetByName('Task List')
+  var a = MetaData_.removeAll(sheet)
+  return
 }
 
 // Emails_

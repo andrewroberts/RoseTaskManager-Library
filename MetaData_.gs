@@ -43,7 +43,7 @@ var MetaData_ = (function myFunction(ns) {
     Log_.fine('key: ' + key)
     Log_.fine('startIndex: ' + startIndex)
 
-    var callingfunction = 'MetaData_.addMetaData()'
+    var callingfunction = 'MetaData_.add()'
     Assert.assertObject(sheet, callingfunction, 'Bad "sheet" type')
     Assert.assertString(key, callingfunction, 'key not a string')
     Assert.assertNumber(startIndex, callingfunction, 'startIndex not a Number')
@@ -95,7 +95,7 @@ var MetaData_ = (function myFunction(ns) {
     Log_.functionEntryPoint()
     Log_.fine('key: ' + key)
 
-    var callingfunction = 'MetaData_.addMetaData()'
+    var callingfunction = 'MetaData_.get()'
     Assert.assertObject(sheet, callingfunction, 'Bad "sheet" type')
     Assert.assertString(key, callingfunction, 'key not a string')
 
@@ -104,7 +104,7 @@ var MetaData_ = (function myFunction(ns) {
     
     try {
     
-      meta = cSAM.SAM.searchByKey (spreadsheetId , key)
+      meta = cSAM.SAM.searchByKey(spreadsheetId, key)
     
     } catch (error) {
     
@@ -133,7 +133,7 @@ var MetaData_ = (function myFunction(ns) {
    * @param {Sheet} sheet
    * @param {String} key The header name of the column (row 1)
    * 
-   * @return {Number} startIndex 0-based 
+   * @return {Number} startIndex 0-based or -1
    */
 
   ns.getColumnIndex = function(sheet, key) {
@@ -146,7 +146,7 @@ var MetaData_ = (function myFunction(ns) {
     if (tidied.length !== 0) {
     
       if (tidied.length > 1) {
-        Log_.warning('Using the first element, although there may be more')
+        Log_.warning('Using the first column meta data (of ' + tidied.length + ') for "' + key + '"')
       }
       
       startIndex = tidied[0].location.dimensionRange.startIndex 
@@ -174,7 +174,7 @@ var MetaData_ = (function myFunction(ns) {
 
     Log_.functionEntryPoint()
 
-    var callingfunction = 'MetaData_.addMetaData()'
+    var callingfunction = 'MetaData_.remove()'
     Assert.assertObject(sheet, callingfunction, 'Bad "sheet" type')
     Assert.assertString(key, callingfunction, 'key not a string')
 
@@ -194,6 +194,45 @@ var MetaData_ = (function myFunction(ns) {
     return result
     
   } // MetaData_.remove()  
+
+  /**
+   * Remove all the meta data from a GSheet
+   *
+   * @param {Sheet} sheet
+   * 
+   * @return {Object} result
+   */
+  
+  ns.removeAll = function(sheet) {
+
+    Log_.functionEntryPoint()
+
+    var callingfunction = 'MetaData_.removeAll()'
+    Assert.assertObject(sheet, callingfunction, 'Bad "sheet" type')
+    
+    var spreadsheetId = sheet.getParent().getId()
+    
+    for (var key in TASK_LIST_COLUMNS) {
+
+      if (TASK_LIST_COLUMNS.hasOwnProperty(key)) {
+
+        // Get all the things and delete them in one go
+        var requests = [{
+          deleteDeveloperMetadata: {
+            dataFilter:{
+              developerMetadataLookup: {
+                metadataKey: TASK_LIST_COLUMNS[key]
+              }
+            }
+          }
+        }]
+    
+        var result = Sheets.Spreadsheets.batchUpdate({requests:requests}, spreadsheetId)
+        Log_.fine('result: ' + result)    
+      }
+    }
+    
+  } // MetaData_.removeAll()  
   
   return ns
     

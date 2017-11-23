@@ -91,6 +91,10 @@ convertEventsToTasks: function() {
 
   Log_.functionEntryPoint()
   
+  var ERROR_TEXT_NO_CALENDAR = 'There is no "' + REGULAR_TASK_CALENDAR_NAME + '" calendar. ' + 
+    'Re-create it or uninstall the Rose Task Manager Add-on for GSheets. ' +
+    REENABLE_CALENDAR_TEXT
+      
   try {
 
     if (Utils_.checkIfAuthorizationRequired()) {
@@ -105,40 +109,20 @@ convertEventsToTasks: function() {
     var calendar
     
     if (calendarId === null) {
-
-      var calendars = CalendarApp.getCalendarsByName(REGULAR_TASK_CALENDAR_NAME)
-      
-      if (calendars.length === 0) {
-      
-        throw new Error(
-          'There is no calendar called "' + REGULAR_TASK_CALENDAR_NAME + '". ' + 
-            'Re-create it or uninstall the Rose Task Manager Add-on for GSheets. ' +
-            REENABLE_CALENDAR_TEXT)
-      }
-      
-      if (calendars.length > 1) {
-        
-        throw new Error('Found ' + calendars.length + ' calendars ' + 
-          'called ' + REGULAR_TASK_CALENDAR_NAME + 'when there should only be one. ' + 
-          'Please delete or rename one. ' + REENABLE_CALENDAR_TEXT)
-      }
-      
-      calendar = calendars[0]
-      properties.setProperty(PROPERTY_CALENDAR_ID_NT, calendar.getId())
-     
+    
+      calendar = getCalendarByName()
+           
     } else {
     
       calendar = CalendarApp.getCalendarById(calendarId)
-      
+            
       if (calendar === null) {
-      
-        throw new Error(
-          'There is no calendar called "' + REGULAR_TASK_CALENDAR_NAME + '". ' + 
-            'Re-create it or uninstall the Rose Task Manager Add-on for GSheets. ' +
-            REENABLE_CALENDAR_TEXT)
+        calendar = getCalendarByName()
       }
     }
-    
+
+    properties.setProperty(PROPERTY_CALENDAR_ID_NT, calendar.getId())
+
     // Check today's events
     // --------------------
     //
@@ -241,7 +225,35 @@ convertEventsToTasks: function() {
   
   // Private Functions
   // -----------------
-  
+
+  /**
+   * Get calendars
+   * 
+   * @return {Calendar} RTM calendar
+   */
+   
+  function getCalendarByName() {
+    
+    Log_.functionEntryPoint()
+    
+    var calendars = CalendarApp.getCalendarsByName(REGULAR_TASK_CALENDAR_NAME)
+    
+    if (calendars.length === 0) {
+      throw new Error(ERROR_TEXT_NO_CALENDAR)
+    }
+    
+    if (calendars.length > 1) {
+      
+      throw new Error('Found ' + calendars.length + ' calendars ' + 
+                      'called ' + REGULAR_TASK_CALENDAR_NAME + 'when there should only be one. ' + 
+                      'Please delete or rename one. ' + REENABLE_CALENDAR_TEXT)
+    }
+    
+    return calendars[0]
+    
+  } // Calendar_.convertEventsToTasks.getCalendarByName()
+
+
   /**
    * Get the present event count. Logging every calendar trigger fills up the 
    * log, so they are just counted instead

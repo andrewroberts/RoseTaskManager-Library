@@ -63,7 +63,6 @@ var EVENT_HANDLERS = {
 //                         ---------------  ----                         ---------------                        ------------------
 
   onInstall:               [function() {},  'onInstall()',              'Failed to install RTM add-on',         onInstall_],
-  onOpen:                  [function() {},  'onOpen()',                 'Failed to start RTM add-on',           onOpen_],
   onEmailStatusUpdates:    [function() {},  'onEmailStatusUpdates()',   'Failed to send email status',          onEmailStatusUpdates_],
   onFormSubmit:            [function() {},  'onFormSubmit()',           'Failed to process form submission',    onFormSubmit_],
   onEdit:                  [function() {},  'onEdit()',                 'Failed to process edit',               onEdit_],
@@ -87,7 +86,6 @@ var EVENT_HANDLERS = {
 // function (arg)                     {return eventHandler_(EVENT_HANDLERS., arg)}
 
 function onInstall(arg)              {return eventHandler_(EVENT_HANDLERS.onInstall, arg)}
-function onOpen(arg)                 {return eventHandler_(EVENT_HANDLERS.onOpen, arg)}
 function onEmailStatusUpdates(arg)   {return eventHandler_(EVENT_HANDLERS.onEmailStatusUpdates, arg)}
 function onFormSubmit(arg)           {return eventHandler_(EVENT_HANDLERS.onFormSubmit, arg)}
 function onEdit(arg)                 {return eventHandler_(EVENT_HANDLERS.onEdit, arg)}
@@ -106,6 +104,8 @@ function onSetNewTaskTemplate(arg)   {return eventHandler_(EVENT_HANDLERS.onSetN
 function onSetStatusTemplate(arg)    {return eventHandler_(EVENT_HANDLERS.onSetStatusTemplate, arg)}
 function onSetNewFrom(arg)           {return eventHandler_(EVENT_HANDLERS.onSetNewFrom, arg)}
 function onDumpEventCount(arg)       {return eventHandler_(EVENT_HANDLERS.onDumpEventCount, arg)}
+
+function onOpen(event) {onOpen_(event)}
 
 // Private Functions
 // =================
@@ -173,9 +173,9 @@ function eventHandler_(config, arg) {
     return config[3](arg)
     
   } catch (error) {
-  
+
     if (typeof Log_ !== 'undefined') {
-      Log_.fine('Caught error: ' + error.name)
+      Log_.fine('Caught error: %s', error)
       Assert.handleError(error, config[2], Log_)  
     }
   }
@@ -197,9 +197,7 @@ function eventHandler_(config, arg) {
     var lock = LockService.getDocumentLock()
 
     if (PRODUCTION_VERSION) {
-  
-      var userLog = BBLog.getLog({lock: lock}); 
-      
+        
       var firebaseUrl = PropertiesService
         .getScriptProperties()
         .getProperty('FIREBASE_URL')
@@ -207,42 +205,51 @@ function eventHandler_(config, arg) {
       var firebaseSecret = PropertiesService
         .getScriptProperties()
         .getProperty('FIREBASE_SECRET')  
+        
+      if (firebaseUrl !== null && firebaseSecret !== null) {
+      
+        var userLog = BBLog.getLog({lock: lock}); 
+            
+        var masterLog = BBLog.getLog({
+          sheetId: null, // No GSheet
+          displayUserId: BBLog.DisplayUserId.USER_KEY_FULL,
+          firebaseUrl: firebaseUrl,
+          firebaseSecret: firebaseSecret
+        })
+      
+        log = {
+        
+          clear: function() {
+            userLog.clear();
+            masterLog.clear();      
+          },
+          
+          info: function() {
+            userLog.info.apply(userLog, arguments);
+            masterLog.info.apply(masterLog, arguments);          
+          },      
+          
+          warning: function() {
+            userLog.warning.apply(userLog, arguments);
+            masterLog.warning.apply(masterLog, arguments);          
+          },
+    
+          severe: function() {
+            userLog.severe.apply(userLog, arguments);
+            masterLog.severe.apply(masterLog, arguments);          
+          }
+        }
+        
+      } else {
 
-      var masterLog = BBLog.getLog({
-        sheetId: null, // No GSheet
-        displayUserId: BBLog.DisplayUserId.USER_KEY_FULL,
-        firebaseUrl: firebaseUrl,
-        firebaseSecret: firebaseSecret
-      })
-      
-      log = {
-      
-        clear: function() {
-          userLog.clear();
-          masterLog.clear();      
-        },
-        
-        info: function() {
-          userLog.info.apply(userLog, arguments);
-          masterLog.info.apply(masterLog, arguments);          
-        } ,      
-        
-        warning: function() {
-          userLog.warning.apply(userLog, arguments);
-          masterLog.warning.apply(masterLog, arguments);          
-        },
-  
-        severe: function() {
-          userLog.severe.apply(userLog, arguments);
-          masterLog.severe.apply(masterLog, arguments);          
-        },
-        
-        functionEntryPoint: function() {},
-        fine: function() {},
-        finer: function() {},
-        finest: function() {},     
+        log = BBLog.getLog({lock: lock});         
       }
       
+      log.functionEntryPoint = function() {},
+      log.fine = function() {}
+      log.finer = function() {}
+      log.finest = function() {}
+            
     } else { // !PRODUCTION_VERSION
     
       var logOptions = {
@@ -356,7 +363,70 @@ function eventHandler_(config, arg) {
   } // eventHandler_.initializeAssertLibrary()
   
 } // eventHandler_()
- 
+
+/**
+ * Event handler for the sheet being opened. 
+ *
+ * This is a special case as all it can do is create a menu whereas the 
+ * usual eventHandler_() does things we don't have permission for at 
+ * this stage
+ */
+
+function onOpen_(event) {
+    
+  if (TEST_FORCE_OPEN_ERROR) {
+    throw new Error('Force onOpen() error for testing.')
+  }
+
+  var menu = SpreadsheetApp
+    .getUi()
+    .createMenu(SCRIPT_NAME)
+    .addItem('Send status email', 'onEmailStatusUpdates')
+    .addItem('Check calendar for tasks', 'onCalendarTrigger')
+    
+  if (event) {
+  
+    if (event.authMode !== ScriptApp.AuthMode.NONE) {
+   
+      var calendarTriggerId = PropertiesService
+        .getDocumentProperties()
+        .getProperty(PROPERTY_CALENDAR_TRIGGER_ID)
+      
+      if (calendarTriggerId === null) {
+        
+        menu.addItem('Enable daily calendar check', 'onStartCalendarTrigger')
+        
+      } else {
+        
+        menu.addItem('Disable daily calendar check', 'onStopCalendarTrigger');
+      }  
+    }
+  }
+    
+  // TODO - Add 'display calendar' & 'display form'
+  
+    menu.addSeparator()
+      .addItem('Settings', 'onShowSidebar')
+  
+  if (!PRODUCTION_VERSION) {
+    
+    menu
+      .addSeparator()
+      .addItem('Uninstall',            'onUninstall')
+      .addItem('Install again',        'onInstall')
+      .addItem('Clear log',            'onClearLog')
+      .addItem('Run unit tests',       'test_roseTaskManager')
+      .addItem('Throw an error',       'onThrowError')     
+      .addItem('Dump config',          'onDumpConfig')     
+      .addItem('Clear config',         'onClearConfig')
+      .addItem('Run calendar trigger', 'onCalendarTrigger')  
+      .addItem('Run a test',           'onTest')
+  }
+  
+  menu.addToUi()
+    
+} // onOpen_()
+
 /**
  * Installation event handler
  */
@@ -381,22 +451,23 @@ function onInstall_() {
   // A list of functions to call to do the installation
   
   var INSTALLATION_FUNCTIONS = [
-    [null,                'Installing ...'],
-    [createRequestForm,   'Installing ... created form'],
-    [setupTaskListSheet,  'Installing ... created task list'],
-    [createCalendar,      'Installing ... created calendar'],
-    [onOpen,              'Installation finished.'],
-    [displayInstructions, null],
+    [null,                  null,                                   'Installing ...'],
+    [createRequestForm,     null,                                   'Installing ... created form'],
+    [setupTaskListSheet,    null,                                   'Installing ... created task list'],
+    [createCalendar,        null,                                   'Installing ... created calendar'],
+    [onOpen_,               {authMode: ScriptApp.AuthMode.LIMITED}, 'Installation finished.'],
+    [displayInstructions,   null,                                   null],
   ]
 
   INSTALLATION_FUNCTIONS.forEach(function(row) {
   
-    if (row[0] !== null) {
-      row[0]()
+    if (row[0] !== null) {   
+      var arg = (row[1] !== null) ? row[1] : 'undefined'
+      row[0](arg)
     }
     
-    if (row[1] !== null) {
-      Utils_.toast(row[1])
+    if (row[2] !== null) {
+      Utils_.toast(row[2])
     }
   })
 
@@ -716,78 +787,6 @@ function onInstall_() {
   } // onInstall.displayInstructions()
     
 } // onInstall()
-
-/**
- * Event handler for the sheet being opened
- */
-
-function onOpen_(event) {
-
-  Log_.functionEntryPoint('event: ' + JSON.stringify(event))
-  var functionName = 'onOpen_()'
-    
-  if (TEST_FORCE_OPEN_ERROR) {
-    throw new Error('Force onOpen() error for testing.')
-  }
-
-  var menu = SpreadsheetApp
-    .getUi()
-    .createMenu(SCRIPT_NAME)
-    .addItem('Send status email', 'onEmailStatusUpdates')
-    .addItem('Check calendar for tasks', 'onCalendarTrigger')
-    
-  if (event) {
-  
-    Log_.fine('event.authMode: ' + event.authMode)
-  
-    if (event.authMode !== ScriptApp.AuthMode.NONE) {
-   
-      // Add a menu item based on properties (doesn't work in AuthMode.NONE)
-      var properties = PropertiesService.getDocumentProperties()
-      var calendarTriggerId = properties.getProperty(PROPERTY_CALENDAR_TRIGGER_ID)
-      
-      if (calendarTriggerId === null) {
-        
-        menu.addItem('Enable daily calendar check', 'onStartCalendarTrigger')
-        
-      } else {
-        
-        menu.addItem('Disable daily calendar check', 'onStopCalendarTrigger');
-      }
-    
-    } else {
-    
-      Log_.fine('No auth to check for calendar trigger')
-    }
-    
-  } else {
-  
-    Log_.fine('No event')
-  }
-    
-  // TODO - Add 'display calendar' & 'display form'
-  
-    menu.addSeparator()
-      .addItem('Settings', 'onShowSidebar')
-  
-  if (!PRODUCTION_VERSION) {
-    
-    menu
-      .addSeparator()
-      .addItem('Uninstall',            'onUninstall')
-      .addItem('Install again',        'onInstall')
-      .addItem('Clear log',            'onClearLog')
-      .addItem('Run unit tests',       'test_roseTaskManager')
-      .addItem('Throw an error',       'onThrowError')     
-      .addItem('Dump config',          'onDumpConfig')     
-      .addItem('Clear config',         'onClearConfig')
-      .addItem('Run calendar trigger', 'onCalendarTrigger')  
-      .addItem('Run a test',           'onTest')
-  }
-  
-  menu.addToUi()
-    
-} // onOpen_()
 
 /** 
  * Send an email status update
@@ -1308,10 +1307,6 @@ function onUninstall_() {
 
   Log_.functionEntryPoint()
 
-  if (PRODUCTION_VERSION) {
-    return
-  }
-    
   var docProperties = PropertiesService.getDocumentProperties()
   var userProperties = PropertiesService.getUserProperties()  
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet()    

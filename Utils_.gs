@@ -91,10 +91,13 @@ getColumnIndex: function(config) {
   if (useMeta) {
   
     // First check if we can get it from column meta data
+    
     columnIndex = MetaData_.getColumnIndex(sheet, columnName)
   }
   
   if (columnIndex === -1) {
+    
+    // Next try from the header
     
     if (typeof headers === 'undefined') {
       headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
@@ -102,10 +105,30 @@ getColumnIndex: function(config) {
     
     columnIndex = headers.indexOf(columnName)
     
-    if (columnIndex === -1 && columnName === TASK_LIST_COLUMNS.TIMESTAMP) {
+    if (columnIndex === -1) {
+    
+      if (columnName === TASK_LIST_COLUMNS.TIMESTAMP) {
       
-      // There may have been an old version where it was renamed to "Listed"
-      columnIndex = headers.indexOf("Listed")
+        // There may have been an old version where it was renamed to "Listed"
+        columnIndex = headers.indexOf("Listed")
+        
+      } else if (columnName === TASK_LIST_COLUMNS.ID) {
+      
+        // Sometimes the 'ID' column header is accidentally deleted
+        if (sheet.getRange('A1').getValue() === '') {        
+          columnIndex = 0
+        }
+        
+      } else if (columnName === TASK_LIST_COLUMNS.SUBJECT) {
+      
+        // These are used to be a regular error, so hard-coded (I'm that kinda guy!)
+        
+        columnIndex = headers.indexOf('Type of Service Request')
+        
+        if (columnIndex === -1) {
+          columnIndex = headers.indexOf('Комментарий')
+        }
+      }
     }
     
     if (columnIndex !== -1) { 
@@ -345,9 +368,9 @@ throwNoColumnError: function(columnName, row) {
 
   throw new Error('Can not find the "' + columnName + '" column in the "' + 
     TASK_LIST_WORK_SHEET_NAME + '" tab. This is required by the add-on, ' + 
-    'check it\'s not been renamed? Did find: ' + JSON.stringify(row)) + '. ' +
+    'check it\'s not been renamed? Did find: ' + JSON.stringify(row) + '. ' +
     'Consider using a custom email template, with placeholders that match the new ' + 
-    'headers: Add-ons > Rose Task Manager > Settings'
+    'headers: Add-ons > Rose Task Manager > Settings')
   
 }, // Utils_.throwNoColumnError()
 
