@@ -6,7 +6,7 @@
 /*
  * This file is part of Rose Task Manager.
  *
- * Copyright (C) 2015 Andrew Roberts (andrew@roberts.net)
+ * Copyright (C) 2015-2018 Andrew Roberts (andrewroberts.net)
  * 
  * This program is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -63,37 +63,49 @@ var EVENT_HANDLERS = {
 //                         ---------------  ----                         ---------------                        ------------------
 
   onInstall:               [function() {},  'onInstall()',              'Failed to install RTM add-on',         onInstall_],
-  onOpen:                  [function() {},  'onOpen()',                 'Failed to start RTM add-on',           onOpen_],
   onEmailStatusUpdates:    [function() {},  'onEmailStatusUpdates()',   'Failed to send email status',          onEmailStatusUpdates_],
   onFormSubmit:            [function() {},  'onFormSubmit()',           'Failed to process form submission',    onFormSubmit_],
   onEdit:                  [function() {},  'onEdit()',                 'Failed to process edit',               onEdit_],
   onCalendarTrigger:       [function() {},  'onCalendarTrigger()',      'Failed to check calendar for tasks',   onCalendarTrigger_],
   onClearLog:              [function() {},  'onClearLog()',             'Failed to clear log',                  onClearLog_],  
   onUninstall:             [function() {},  'onUninstall()',            'Failed to uninstall',                  onUninstall_],  
-  updateTrelloBoard:       [function() {},  'updateTrelloBoard()',      'Failed to update Trello boards',       updateTrelloBoard_],  
   onDumpConfig:            [function() {},  'onDumpConfig()',           'Failed to dump config',                onDumpConfig_],  
   onClearConfig:           [function() {},  'onClearConfig()',          'Failed to clear config',               onClearConfig_],  
   onThrowError:            [function() {},  'onThrowError()',           'Deliberatley threw error',             onThrowError_],  
   onStartCalendarTrigger:  [function() {},  'onStartCalendarTrigger()', 'Failed to start calendar trigger',     onStartCalendarTrigger_],    
-  onStopCalendarTrigger:   [function() {},  'onStopCalendarTrigger()',  'Failed to stop calendar trigger',      onStopCalendarTrigger_],      
+  onStopCalendarTrigger:   [function() {},  'onStopCalendarTrigger()',  'Failed to stop calendar trigger',      onStopCalendarTrigger_],       
+  onTest:                  [function() {},  'onTest()',                  'Failed to run test',                  onTest_],      
+  onShowSidebar:           [function() {},  'onShowSidebar()',           'Failed to show sidebar',              onShowSidebar_],        
+  onGetSettings:           [function() {},  'onGetSettings()',           'Failed to get menu',                  onGetSettings_],        
+  onSetNewTaskTemplate:    [function() {},  'onSetNewTaskTemplate()',    'Failed to set new task template',     onSetNewTaskTemplate_],          
+  onSetStatusTemplate:     [function() {},  'onSetStatusTemplate()',     'Failed to set status value',          onSetStatusTemplate_],          
+  onSetNewFrom:            [function() {},  'onSetNewFrom()',            'Failed to set email from',            onSetNewFrom_],          
+  onDumpEventCount:        [function() {},  'onDumpEventCount()',        'Failed to dump event count',          onDumpEventCount_],          
 }
 
 // function (arg)                     {return eventHandler_(EVENT_HANDLERS., arg)}
 
 function onInstall(arg)              {return eventHandler_(EVENT_HANDLERS.onInstall, arg)}
-function onOpen(arg)                 {return eventHandler_(EVENT_HANDLERS.onOpen, arg)}
 function onEmailStatusUpdates(arg)   {return eventHandler_(EVENT_HANDLERS.onEmailStatusUpdates, arg)}
 function onFormSubmit(arg)           {return eventHandler_(EVENT_HANDLERS.onFormSubmit, arg)}
 function onEdit(arg)                 {return eventHandler_(EVENT_HANDLERS.onEdit, arg)}
 function onCalendarTrigger(arg)      {return eventHandler_(EVENT_HANDLERS.onCalendarTrigger, arg)}
 function onClearLog(arg)             {return eventHandler_(EVENT_HANDLERS.onClearLog, arg)}
 function onUninstall(arg)            {return eventHandler_(EVENT_HANDLERS.onUninstall, arg)}
-function updateTrelloBoard(arg)      {return eventHandler_(EVENT_HANDLERS.updateTrelloBoard, arg)}
 function onDumpConfig(arg)           {return eventHandler_(EVENT_HANDLERS.onDumpConfig, arg)}
 function onClearConfig(arg)          {return eventHandler_(EVENT_HANDLERS.onClearConfig, arg)}
 function onThrowError(arg)           {return eventHandler_(EVENT_HANDLERS.onThrowError, arg)}
 function onStartCalendarTrigger(arg) {return eventHandler_(EVENT_HANDLERS.onStartCalendarTrigger, arg)}
 function onStopCalendarTrigger(arg)  {return eventHandler_(EVENT_HANDLERS.onStopCalendarTrigger, arg)}
+function onTest(arg)                 {return eventHandler_(EVENT_HANDLERS.onTest, arg)}
+function onShowSidebar(arg)          {return eventHandler_(EVENT_HANDLERS.onShowSidebar, arg)}
+function onGetSettings(arg)          {return eventHandler_(EVENT_HANDLERS.onGetSettings, arg)}
+function onSetNewTaskTemplate(arg)   {return eventHandler_(EVENT_HANDLERS.onSetNewTaskTemplate, arg)}
+function onSetStatusTemplate(arg)    {return eventHandler_(EVENT_HANDLERS.onSetStatusTemplate, arg)}
+function onSetNewFrom(arg)           {return eventHandler_(EVENT_HANDLERS.onSetNewFrom, arg)}
+function onDumpEventCount(arg)       {return eventHandler_(EVENT_HANDLERS.onDumpEventCount, arg)}
+
+function onOpen(event) {onOpen_(event)}
 
 // Private Functions
 // =================
@@ -101,8 +113,9 @@ function onStopCalendarTrigger(arg)  {return eventHandler_(EVENT_HANDLERS.onStop
 function onCalendarTrigger_()      {Calendar_.convertEventsToTasks()}
 function onStartCalendarTrigger_() {Calendar_.createTrigger()}
 function onStopCalendarTrigger_()  {Calendar_.deleteTrigger(true)}
-function updateTrelloBoard_()      {Trello.uploadCards()}
 function onThrowError_()           {throw new Error('Force error throw')}
+function onTest_()                 {test()}
+function onDumpEventCount_()       {Calendar_.dumpEventCount()}
 
 // General
 // -------
@@ -154,30 +167,17 @@ function eventHandler_(config, arg) {
 
     initializeAssertLibrary()
     
-    Log_.info('Handling ' + config[1] + ' from ' + userEmail)
+    // Comment this out as it runs too often on all the calendar checks
+//    Log_.info('Handling ' + config[1] + ' from ' + userEmail)
 
     return config[3](arg)
     
   } catch (error) {
-  
-    Log_.fine('Caught error: ' + error.name)
-  
-    if (error.name === 'AuthorizationError') {
-    
-      // This is a special error thrown by TrelloApp to indicate
-      // that user authorization is required
-      var authorizationUrl = (new TrelloApp.App()).getAuthorizationUri()
-      
-      Dialog.show(
-        'Opening Authorization window...', 
-          'Follow the instructions in this window, close ' + 
-          'it and then try the action again.<script>window.open("' + authorizationUrl + '")</script>',
-          100)
-          
-    } else {
-    
-      Assert.handleError(error, config[2], Log_)
-    } 
+
+    if (typeof Log_ !== 'undefined') {
+      Log_.fine('Caught error: %s', error)
+      Assert.handleError(error, config[2], Log_)  
+    }
   }
   
   return
@@ -197,9 +197,7 @@ function eventHandler_(config, arg) {
     var lock = LockService.getDocumentLock()
 
     if (PRODUCTION_VERSION) {
-  
-      var userLog = BBLog.getLog({lock: lock}); 
-      
+        
       var firebaseUrl = PropertiesService
         .getScriptProperties()
         .getProperty('FIREBASE_URL')
@@ -207,49 +205,64 @@ function eventHandler_(config, arg) {
       var firebaseSecret = PropertiesService
         .getScriptProperties()
         .getProperty('FIREBASE_SECRET')  
+        
+      if (firebaseUrl !== null && firebaseSecret !== null) {
+      
+        var userLog = BBLog.getLog({lock: lock}); 
+            
+        var masterLog = BBLog.getLog({
+          sheetId: null, // No GSheet
+          displayUserId: BBLog.DisplayUserId.USER_KEY_FULL,
+          firebaseUrl: firebaseUrl,
+          firebaseSecret: firebaseSecret
+        })
+      
+        log = {
+        
+          clear: function() {
+            userLog.clear();
+            masterLog.clear();      
+          },
+          
+          info: function() {
+            userLog.info.apply(userLog, arguments);
+            masterLog.info.apply(masterLog, arguments);          
+          },      
+          
+          warning: function() {
+            userLog.warning.apply(userLog, arguments);
+            masterLog.warning.apply(masterLog, arguments);          
+          },
+    
+          severe: function() {
+            userLog.severe.apply(userLog, arguments);
+            masterLog.severe.apply(masterLog, arguments);          
+          }
+        }
+        
+      } else {
 
-      var masterLog = BBLog.getLog({
-        sheetId: null, // No GSheet
-        displayUserId: BBLog.DisplayUserId.USER_KEY_FULL,
-        firebaseUrl: firebaseUrl,
-        firebaseSecret: firebaseSecret
-      })
-      
-      log = {
-      
-        clear: function() {
-          userLog.clear();
-          masterLog.clear();      
-        },
-        
-        info: function() {
-          userLog.info.apply(userLog, arguments);
-          masterLog.info.apply(masterLog, arguments);          
-        } ,      
-        
-        warning: function() {
-          userLog.warning.apply(userLog, arguments);
-          masterLog.warning.apply(masterLog, arguments);          
-        },
-  
-        severe: function() {
-          userLog.severe.apply(userLog, arguments);
-          masterLog.severe.apply(masterLog, arguments);          
-        },
-        
-        functionEntryPoint: function() {},
-        fine: function() {},
-        finer: function() {},
-        finest: function() {},     
+        log = BBLog.getLog({lock: lock});         
       }
       
+      log.functionEntryPoint = function() {},
+      log.fine = function() {}
+      log.finer = function() {}
+      log.finest = function() {}
+            
     } else { // !PRODUCTION_VERSION
     
-      log = BBLog.getLog({
+      var logOptions = {
         lock: lock,
         level: DEBUG_LOG_LEVEL,
-        displayFunctionNames: DEBUG_LOG_DISPLAY_FUNCTION_NAMES,
-      }); 
+        displayFunctionNames: DEBUG_LOG_DISPLAY_FUNCTION_NAMES,      
+      }
+    
+      if (SpreadsheetApp.getActiveSpreadsheet() === null) {
+        logOptions.sheetId = TEST_SPREADSHEET_ID        
+      }
+
+      log = BBLog.getLog(logOptions)      
     }
     
     return log;
@@ -350,7 +363,70 @@ function eventHandler_(config, arg) {
   } // eventHandler_.initializeAssertLibrary()
   
 } // eventHandler_()
- 
+
+/**
+ * Event handler for the sheet being opened. 
+ *
+ * This is a special case as all it can do is create a menu whereas the 
+ * usual eventHandler_() does things we don't have permission for at 
+ * this stage
+ */
+
+function onOpen_(event) {
+    
+  if (TEST_FORCE_OPEN_ERROR) {
+    throw new Error('Force onOpen() error for testing.')
+  }
+
+  var menu = SpreadsheetApp
+    .getUi()
+    .createMenu(SCRIPT_NAME)
+    .addItem('Send status email', 'onEmailStatusUpdates')
+    .addItem('Check calendar for tasks', 'onCalendarTrigger')
+    
+  if (event) {
+  
+    if (event.authMode !== ScriptApp.AuthMode.NONE) {
+   
+      var calendarTriggerId = PropertiesService
+        .getDocumentProperties()
+        .getProperty(PROPERTY_CALENDAR_TRIGGER_ID)
+      
+      if (calendarTriggerId === null) {
+        
+        menu.addItem('Enable daily calendar check', 'onStartCalendarTrigger')
+        
+      } else {
+        
+        menu.addItem('Disable daily calendar check', 'onStopCalendarTrigger');
+      }  
+    }
+  }
+    
+  // TODO - Add 'display calendar' & 'display form'
+  
+    menu.addSeparator()
+      .addItem('Settings', 'onShowSidebar')
+  
+  if (!PRODUCTION_VERSION) {
+    
+    menu
+      .addSeparator()
+      .addItem('Uninstall',            'onUninstall')
+      .addItem('Install again',        'onInstall')
+      .addItem('Clear log',            'onClearLog')
+      .addItem('Run unit tests',       'test_roseTaskManager')
+      .addItem('Throw an error',       'onThrowError')     
+      .addItem('Dump config',          'onDumpConfig')     
+      .addItem('Clear config',         'onClearConfig')
+      .addItem('Run calendar trigger', 'onCalendarTrigger')  
+      .addItem('Run a test',           'onTest')
+  }
+  
+  menu.addToUi()
+    
+} // onOpen_()
+
 /**
  * Installation event handler
  */
@@ -363,6 +439,8 @@ function onInstall_() {
   Log_.functionEntryPoint()
   var functionName = 'onInstall_()'
   
+  Log_.info('Installing...')
+  
   var properties = PropertiesService.getDocumentProperties()
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet()    
   
@@ -370,27 +448,26 @@ function onInstall_() {
     throw new Error('Force onInstall() error for testing.')
   }
   
-  Utils_.postAnalytics(functionName)
-
   // A list of functions to call to do the installation
   
   var INSTALLATION_FUNCTIONS = [
-    [null,                'Installing ...'],
-    [createRequestForm,   'Installing ... created form'],
-    [setupTaskListSheet,  'Installing ... created task list'],
-    [createCalendar,      'Installing ... created calendar'],
-    [onOpen,              'Installation finished.'],
-    [displayInstructions, null],
+    [null,                  null,                                   'Installing ...'],
+    [createRequestForm,     null,                                   'Installing ... created form'],
+    [setupTaskListSheet,    null,                                   'Installing ... created task list'],
+    [createCalendar,        null,                                   'Installing ... created calendar'],
+    [onOpen_,               {authMode: ScriptApp.AuthMode.LIMITED}, 'Installation finished.'],
+    [displayInstructions,   null,                                   null],
   ]
 
   INSTALLATION_FUNCTIONS.forEach(function(row) {
   
-    if (row[0] !== null) {
-      row[0]()
+    if (row[0] !== null) {   
+      var arg = (row[1] !== null) ? row[1] : 'undefined'
+      row[0](arg)
     }
     
-    if (row[1] !== null) {
-      Utils_.toast(row[1])
+    if (row[2] !== null) {
+      Utils_.toast(row[2])
     }
   })
 
@@ -489,16 +566,16 @@ function onInstall_() {
 
     var count = 0
     var rangeG1 = taskListSheet.getRange('G1')    
-    var finished = (rangeG1.getValue() === SS_COL_NOTES)
+    var finished = (rangeG1.getValue() === TASK_LIST_COLUMNS.NOTES)
 
     while (count <= 60 && !finished) {
 
-      // Finished once the last column, SS_COL_NOTES, has been written.
-      finished = (rangeG1.getValue() === SS_COL_NOTES)
+      // Finished once the last column, TASK_LIST_COLUMNS.NOTES, has been written.
+      finished = (rangeG1.getValue() === TASK_LIST_COLUMNS.NOTES)
 
       // Rename the 'Timestamp' column header again to force a write 
       // to the sheet, flush the sheet and wait
-      taskListSheet.getRange('A1').setValue(SS_COL_TIMESTAMP)
+      taskListSheet.getRange('A1').setValue(TASK_LIST_COLUMNS.TIMESTAMP)
       SpreadsheetApp.flush()
       Utilities.sleep(500)
       count++
@@ -508,7 +585,8 @@ function onInstall_() {
     
     if (count > 60) {
     
-      throw new Error('Timed out waiting for the form to be created, ' + 
+      throw new Error(
+        'Timed out waiting for the form to be created, ' + 
         'please try again.')
     }
 
@@ -540,19 +618,21 @@ function onInstall_() {
     taskListSheet
       .insertColumnBefore(1)
       .getRange('A1')
-      .setValue(SS_COL_ID)
+      .setValue(TASK_LIST_COLUMNS.ID)
 
     // Insert two new columns after 'Timestamp'.
     taskListSheet
       .insertColumnsAfter(2, 2)
       .getRange('C1:D1')
-      .setValues([[SS_COL_STARTED, SS_COL_CLOSED]])
+      .setValues([[TASK_LIST_COLUMNS.STARTED, TASK_LIST_COLUMNS.CLOSED]])
 
     // Insert the three new columns after 'Priority'.
     taskListSheet
       .insertColumnsAfter(7, 3)
       .getRange(1, 8, 1, 3)
-      .setValues([[SS_COL_STATUS, SS_COL_CATEGORY, SS_COL_ASSIGNED_TO]])
+      .setValues([[TASK_LIST_COLUMNS.STATUS, 
+                   TASK_LIST_COLUMNS.CATEGORY, 
+                   TASK_LIST_COLUMNS.ASSIGNED_TO]])
   
     // Bold and center the headers.
     taskListSheet
@@ -626,13 +706,7 @@ function onInstall_() {
     }
   
     tasksRange.setDataValidations(rules)
-  
-    // TODO - Conditional formatting.
     
-//    templateSheet
-//      .getRange('A2:A4')
-//      .copyFormatToRange(taskListSheet, 7, 7, 2, maxTaskRows)
-  
     // Set up status column data validation and formatting
     // ---------------------------------------------------
       
@@ -658,48 +732,27 @@ function onInstall_() {
   
     // TODO - Conditional formatting.
     
-//    templateSheet
-//      .getRange('A7:A11')
-//      .copyFormatToRange(taskListSheet, 8, 8, 2, maxTaskRows)
-  
-    // Setup the email templates sheet
-    // -------------------------------
-
-/* TODO 
-
-    templateSheet = SpreadsheetApp
-      .openById(EMAIL_TEMPLATE_ID)
-        .getSheetByName(EMAIL_TEMPLATE_NAME)
-
-    templateValues = templateSheet.getRange('A1:B8').getValues()
-
-    existingSheet = spreadsheet.getSheetByName(EMAIL_TEMPLATE_NAME)
-
-    if (existingSheet) {
+    // Add meta data 
+    // -------------
+    //
+    // This allows the location of the columns to be found even if the header
+    // names (especially for different languages) are changed or the columns 
+    // are moved
     
-      existingSheet.setName(EMAIL_TEMPLATE_NAME + ' ' + now)
+    var headers = taskListSheet
+      .getRange(1, 1, 1, taskListSheet.getLastColumn())
+      .getValues()[0]
       
-      Dialog.show(REGULAR_TASK_CALENDAR_NAME, 
-            'An existing email template sheet was found during installation. ' + 
-              'It has been renamed and a new one created')
+    var columnIndex = 0
     
-      Log_.warning('renamed existing email template sheet')    
+    for (var key in TASK_LIST_COLUMNS) {    
+      if (TASK_LIST_COLUMNS.hasOwnProperty(key)) {
+        MetaData_.add(taskListSheet, TASK_LIST_COLUMNS[key], columnIndex++)
+      }
     }
-
-    var emailTemplateSheet = spreadsheet.insertSheet(EMAIL_TEMPLATE_NAME, 1)
-
-    emailTemplateSheet.getRange('A1:B8').setValues(templateValues)
     
-    emailTemplateSheet.autoResizeColumn(1)
+    Log_.fine('Initialised meta data on' + columnIndex + 'columns')
     
-    emailTemplateSheet
-      .getRange(1, 1, emailTemplateSheet.getMaxRows(), 1)
-      .setFontWeight('bold')
-*/
-
-    // Initialise the task ID
-    // ----------------------
-
     SpreadsheetApp.setActiveSheet(taskListSheet)
     Log_.info('"' + TASK_LIST_WORK_SHEET_NAME + '" sheet setup')
     
@@ -735,178 +788,114 @@ function onInstall_() {
     
 } // onInstall()
 
-/**
- * Event handler for the sheet being opened
- */
-
-function onOpen_(event) {
-
-  Log_.functionEntryPoint('event: ' + JSON.stringify(event))
-  var functionName = 'onOpen_()'
-  
-  if (TEST_FORCE_OPEN_ERROR) {
-    throw new Error('Force onOpen() error for testing.')
-  }
-
-  Utils_.postAnalytics(functionName)
-
-  var ui = SpreadsheetApp.getUi()
-  var menu = PRODUCTION_VERSION ? ui.createAddonMenu() : ui.createMenu(SCRIPT_NAME)
-  menu.addItem('Send status email', 'onEmailStatusUpdates')
-  menu.addItem('Check calendar for tasks', 'onCalendarTrigger')
-    
-  if (event) {
-  
-    Log_.fine('event.authMode: ' + event.authMode)
-  
-    if (event.authMode !== ScriptApp.AuthMode.NONE) {
-   
-      // Add a menu item based on properties (doesn't work in AuthMode.NONE)
-      var properties = PropertiesService.getDocumentProperties()
-      var calendarTriggerId = properties.getProperty(PROPERTY_CALENDAR_ID)
-      
-      if (calendarTriggerId === null) {
-        
-        menu.addItem('Enable daily calendar check', 'onStartCalendarTrigger')
-        
-      } else {
-        
-        menu.addItem('Disable daily calendar check', 'onStopCalendarTrigger');
-      }
-    
-    } else {
-    
-      Log_.fine('No auth to check for calendar trigger')
-    }
-    
-  } else {
-  
-    Log_.fine('No event')
-  }
-    
-  // TODO - Add 'display calendar' & 'display form'
-  
-  if (!PRODUCTION_VERSION) {
-    
-    menu
-      .addSeparator()
-      .addItem('Uninstall',            'onUninstall')
-      .addItem('Install again',        'onInstall')
-      .addItem('Clear log',            'onClearLog')
-      .addItem('Run unit tests',       'test_roseTaskManager')
-      .addItem('Throw an error',       'onThrowError')     
-      .addItem('Dump config',          'onDumpConfig')     
-      .addItem('Clear config',         'onClearConfig')
-      .addItem('Run calendar trigger', 'onCalendarTrigger')      
-      .addSeparator()
-//      .addItem('Display Available Trello Members', 'displayTrelloMembers')
-//      .addItem('Display Available Trello Boards', 'displayTrelloBoards')
-//      .addItem('Display Available Trello Lists', 'displayTrelloLists')
-      .addItem('Upload tasks to Trello', 'updateTrelloBoard')
-  }
-  
-  menu.addToUi()
-    
-} // onOpen_()
-
 /** 
  * Send an email status update
  */
 
-// TODO - remove bool return.
-
 function onEmailStatusUpdates_() {
   
-  Log_.functionEntryPoint()
-  var functionName = 'onEmailStatusUpdates_()'
-  
-  var SELECT_VALID_EMAIL = 'Select a row on the "' + TASK_LIST_WORK_SHEET_NAME + '" ' + 
-    'sheet with a valid email address  and try again.'
-  
-  var FAILED_TO_SEND_STATUS = SCRIPT_NAME + ' ' + 
-    'Failed to send Status email.'
-  
-  Utils_.postAnalytics(functionName)
-  
-  // Get the row number of the row in the spreadsheet that's 
-  // currently active (the task list)
-  
-  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet()
-  var taskListSheet = spreadsheet.getActiveSheet()
-  
-  if (taskListSheet.getName() !== TASK_LIST_WORK_SHEET_NAME) {    
-    throw new Error(SELECT_VALID_EMAIL)
-  }
-  
-  var row = taskListSheet.getActiveRange().getRowIndex()
-  
-  if (row <= 1) {    
-    throw new Error(SELECT_VALID_EMAIL)
-  }
-  
-  Log_.fine("Working on row: " + row)
-  
-  // Retrieve the user's info 
-  
-  var columnNumber = Utils_.getColumnPosition(taskListSheet, SS_COL_CONTACT_EMAIL)
-  var userEmail = taskListSheet.getRange(row, columnNumber).getValue()
-  
-  if (userEmail === "") {
-    throw new Error(SELECT_VALID_EMAIL)
-  }
-  
-  columnNumber = Utils_.getColumnPosition(taskListSheet, SS_COL_TITLE)
-  var title = taskListSheet.getRange(row, columnNumber).getValue()
-  
-  columnNumber = Utils_.getColumnPosition(taskListSheet, SS_COL_STATUS)
-  var status = taskListSheet.getRange(row, columnNumber).getValue()
-  
-  columnNumber = Utils_.getColumnPosition(taskListSheet, SS_COL_ID)
-  var id = taskListSheet.getRange(row, columnNumber).getValue()
-  
-  if (status === "") {
-    throw new Error('Please select a row with a Status value and try again.')
-  }
-  
-  // Construct the update email and send it
-  
-  /* 
-  TODO - fillTemplate.gs needs a proper review first.
-  
-  var emailTemplateSheet = spreadsheet.getSheetByName(EMAIL_TEMPLATE_NAME)
-  
-  if (!emailTemplateSheet) {
-  
-  throw new Error('Can not find the email template sheet. Reinstall Rose Task ' + 
-  'Manager to recreate it.')
-  }
-  */    
-  //    var subjectTemplate = emailTemplateSheet.getRange('B4').getValue()    
-  var subjectTemplate = STATUS_SUBJECT_TEMPLATE
-  var subjectData = {id:id, status:status}
-  var subject = Utils_.fillInTemplateFromObject(subjectTemplate, subjectData)
-  
-  //    var bodyTemplate = emailTemplateSheet.getRange('B5').getValue()      
-  var bodyTemplate = STATUS_BODY_TEMPLATE
-  var bodyData = {row:id, title:title, status:status}
-  var body = Utils_.fillInTemplateFromObject(bodyTemplate, bodyData)
+  Log_.functionEntryPoint()  
 
-  if (!TEST_BLOCK_EMAILS) {
-
-    MailApp.sendEmail(userEmail, 
-                      subject, 
-                      body, 
-                      {name:SCRIPT_NAME, cc:Utils_.getListAdminEmail()})
+  if (TEST_FORCE_STATUS_SEND_ERROR) {
+    throw new Error('Force onEmailStatusUpdates_ Error')
+  }
     
-    Log_.info(
-      "Email status sent to email: " + userEmail +
-      "\n\nsubject: " + subject +
-      "\n\nbody: " + body)
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet()
+  var inSpreadsheet = true
+  
+  if (spreadsheet === null && !PRODUCTION_VERSION) {
+    inSpreadsheet = false
+  }
+
+  // Check the users row selection
+    
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet()
+  var taskListSheet
+  var rowNumber
+
+  if (inSpreadsheet) {
+  
+    taskListSheet = spreadsheet.getActiveSheet()
+    
+    if (taskListSheet.getName() !== TASK_LIST_WORK_SHEET_NAME) {    
+      throw new Error(ERROR_SELECT_VALID_EMAIL)
+    }
+    
+    rowNumber = taskListSheet.getActiveRange().getRowIndex()
+    Log_.fine("Working on row number: " + rowNumber)
+    
+    if (rowNumber <= 1) {
+      throw new Error(ERROR_SELECT_VALID_EMAIL)
+    }  
+    
+  } else {
+  
+    spreadsheet = SpreadsheetApp.openById(TEST_SPREADSHEET_ID)
+    taskListSheet = spreadsheet.getSheetByName(TASK_LIST_WORK_SHEET_NAME)
+    rowNumber = 2 
+  }
+
+  var numberOfColumns = taskListSheet.getLastColumn()
+  var headerRow = taskListSheet.getRange(1, 1, 1, numberOfColumns).getValues()[0]
+  var activeRow = taskListSheet.getRange(rowNumber, 1, 1, numberOfColumns).getValues()[0]
+  
+  // Get all the user data for this row into an object
+  
+  var textData = {}
+  
+  for (var columnIndex = 0; columnIndex < numberOfColumns; columnIndex++) {
+  
+    var header = headerRow[columnIndex]
+    var nextValue = activeRow[columnIndex]
+    
+    Log_.fine('header: ' + header)
+    Log_.fine('nextValue: ' + nextValue)
+    
+    textData[header] = nextValue.toString()
+  }
+
+//  Log_.fine('textData: ' + JSON.parse(textData))
+
+  var emailColumnIndex = Utils_.getColumnIndex({
+    sheet: taskListSheet,
+    columnName: TASK_LIST_COLUMNS.CONTACT_EMAIL,
+    required: true,
+    headers: headerRow,
+  })
+
+  var recipient = activeRow[emailColumnIndex].trim()
+
+  if (recipient === '') {
+    throw new Error('This row has no email address')
+  }
+
+  // Get the email templates
+  
+  var templates = Utils_.getEmailTemplates(
+    PROPERTY_STATUS_EMAIL, 
+    STATUS_SUBJECT_TEMPLATE, 
+    STATUS_BODY_TEMPLATE)
+
+  // Send the status email
+  
+  var subject   = Utils_.fillInTemplate(templates.subject, textData)
+  var htmlBody  = Utils_.fillInTemplate(templates.htmlBody, textData)
+  var plainBody = Utils_.fillInTemplate(templates.plainBody, textData)
+  
+  var emailFrom = PropertiesService
+    .getDocumentProperties()
+    .getProperty(PROPERTY_EMAIL_FROM) || SCRIPT_NAME
+      
+  var options = {
+    name: emailFrom, 
+    cc: Utils_.getListAdminEmail(),
+    htmlBody: htmlBody}
+
+  if (Utils_.sendEmail(recipient, subject, plainBody, options) && inSpreadsheet) {
+    Dialog.show(SCRIPT_NAME, 'Status email sent to ' + recipient, 90)
   }
   
-  Dialog.show(SCRIPT_NAME, 'Status email sent to ' + userEmail, 90)
-        
-  return true
+  Log_.info('Sent email status')
   
 } // onEmailStatusUpdates_()
 
@@ -922,23 +911,24 @@ function onEmailStatusUpdates_() {
 
 function onFormSubmit_(event) {
 
+  Log_.functionEntryPoint()
+  
   if (Utils_.checkIfAuthorizationRequired()) {
     
     // No point continuing, an email to re-auth has already been sent to 
     // the user
-    Log_.warning('Script needs to be re-authorized')
+    Log_.warning('Script needs to be re-authorized (on form submission)')
     return
   }
 
-  Log_.functionEntryPoint()
+  Log_.info('Form submission')
+
   var functionName = 'onFormSubmit_()'
   
   if (TEST_FORCE_FORMSUBMIT_ERROR) {    
     throw new Error('Force onEmailStatusUpdates() error for testing.')
   }
     
-  Utils_.postAnalytics(functionName)
-  
   var taskListSheet = event.range.getSheet()
   
   if (taskListSheet.getName() !== TASK_LIST_WORK_SHEET_NAME) {
@@ -951,18 +941,23 @@ function onFormSubmit_(event) {
   }
   
   var allRows = taskListSheet.getDataRange().getValues()
+  var headers = allRows[0]
   
   var columnIndex = {
-    id: getColumnIndex(SS_COL_ID),
-    timestamp: getColumnIndex(SS_COL_TIMESTAMP, false),
-    started: getColumnIndex(SS_COL_STARTED),
-    closed: getColumnIndex(SS_COL_CLOSED),
-    title: getColumnIndex(SS_COL_TITLE),
-    status: getColumnIndex(SS_COL_STATUS),
-    email: getColumnIndex(SS_COL_CONTACT_EMAIL)
+    id:        getColumnIndex(TASK_LIST_COLUMNS.ID),
+    timestamp: getColumnIndex(TASK_LIST_COLUMNS.TIMESTAMP, false),
+    started:   getColumnIndex(TASK_LIST_COLUMNS.STARTED),
+    closed:    getColumnIndex(TASK_LIST_COLUMNS.CLOSED),
+    title:     getColumnIndex(TASK_LIST_COLUMNS.TITLE),
+    status:    getColumnIndex(TASK_LIST_COLUMNS.STATUS),
+    email:     getColumnIndex(TASK_LIST_COLUMNS.CONTACT_EMAIL)
   }
-    
+
+  Log_.fine("columnIndex: %s", columnIndex)
+
   var nextIdObject = getNextId()
+  
+  Log_.fine("nextIdObject: %s", nextIdObject)
   
   var nextId = nextIdObject.nextId
   var rowIndex = nextIdObject.rowIndex
@@ -992,8 +987,7 @@ function onFormSubmit_(event) {
     // Get the column numbers of the three timestamp values and update 
     // their formatting
     
-    if (columnIndex.timestamp !== -1) {
-    
+    if (columnIndex.timestamp !== -1) {    
       taskListSheet
         .getRange(rowIndex + 1, columnIndex.timestamp + 1)
         .setNumberFormat(DATE_TIME_FORMAT)
@@ -1012,41 +1006,47 @@ function onFormSubmit_(event) {
     
     var title = allRows[rowIndex][columnIndex.title]
     
-    // TODO - Get template from sheet - need to review fillTemplate first,
-    // looks like there could be overlap or it's too generic
+    // Get the draft templates
     
-    var subject = Utils_.fillInTemplateFromObject(
+    var templates = Utils_.getEmailTemplates(
+      PROPERTY_NEW_TASK_EMAIL, 
       FORM_SUBJECT_TEMPLATE, 
-      {id:nextId, title:title})    
+      FORM_BODY_TEMPLATE)
+      
+    // Send the status email
+
+    var textData = getTextDate()
+
+    var subject   = Utils_.fillInTemplate(templates.subject, textData)
+    var htmlBody  = Utils_.fillInTemplate(templates.htmlBody, textData)
+    var plainBody = Utils_.fillInTemplate(templates.plainBody, textData)
     
-    var body = Utils_.fillInTemplateFromObject(
-      FORM_BODY_TEMPLATE, 
-      {id:nextId, title:title})
-    
+    var emailFrom = PropertiesService
+      .getDocumentProperties()
+      .getProperty(PROPERTY_EMAIL_FROM) || SCRIPT_NAME
+      
+    var options = {
+      htmlBody: htmlBody,
+      name: emailFrom}
+
     var email = allRows[rowIndex][columnIndex.email]
-    
-    var options = {}
-    
+
     if (email.indexOf('@') === -1) {
       
       Log_.warning('no email sent to user, invalid address: ' + email)            
       
       // No user email address
       email = Utils_.getListAdminEmail()
-      options.name = SCRIPT_NAME
-      body += '\n\nNO EMAIL SENT TO USER as no valid email address found.'
+      plainBody += '\n\nNO EMAIL SENT TO USER as no valid email address found.'
       
     } else {
       
-      options = {name:SCRIPT_NAME, cc:Utils_.getListAdminEmail()}
+      options.cc = Utils_.getListAdminEmail()
     }
     
-    MailApp.sendEmail(email, subject, body, options)
+    MailApp.sendEmail(email, subject, plainBody, options)
     
-    Log_.info(
-      'Email sent to ' + email + 
-      ' - subject: ' + subject + 
-      ' body: ' + body)
+    Log_.info('"New task" Email sent to ' + email + ' - subject: ' + subject)
     
   } // Each new row
   
@@ -1065,8 +1065,8 @@ function onFormSubmit_(event) {
   if (countUpdatedRows >= 1) {    
     
     taskListSheet
-    .getRange(lastRowIndexWithId + 2, 1, countUpdatedRows, maxColumns)
-    .setValues(updatedRows)
+      .getRange(lastRowIndexWithId + 2, 1, countUpdatedRows, maxColumns)
+      .setValues(updatedRows)
     
     SpreadsheetApp.flush()
     
@@ -1082,51 +1082,47 @@ function onFormSubmit_(event) {
   
   // Private Functions
   // -----------------
-  
+
   /**
-    * Get the index (0-based) of this column
-    *
-    * @param {string} columnName
-    * @param {booleand} required [OPTIONAL, DEFAULT = true]
-    *
-    * @return {number} column index or -1
-    */
-  
+   * Get the index (0-based) of this column
+   * 
+   * @return {Number} column index
+   */
+
   function getColumnIndex(columnName, required) {
     
-    Log_.functionEntryPoint('columnName: ' + columnName + ', required: ' + required)
-    var callingfunction = 'onFormSubmit_.getColumnIndex()'
-    required = (typeof required === 'undefined') ? true : false
-    
-    var columnIndex = allRows[0].indexOf(columnName)
-    Log_.fine('columnIndex: ' + columnIndex)
-
-    if (columnIndex === -1 && columnName === SS_COL_TIMESTAMP) {
-        
-      // There may have been an old version where it was renamed to "Listed"
-      columnIndex = allRows[0].indexOf(SS_COL_LISTED)
-    }
-
-    if (columnIndex === -1) {
-
-      if (required) {
-  
-        Assert.assert(
-          false, 
-          callingfunction,
-          'Can not find the "' + columnName + '" column in the "' + 
-            TASK_LIST_WORK_SHEET_NAME + '" tab. This is required by the add-on, ' + 
-            'check it\'s not been renamed? Did find: ' + JSON.stringify(allRows[0]))
-          
-      } else {
-      
-        Log_.warning('No "' + columnName + '" column. Found: ' + JSON.stringify(allRows[0]))
-      }
-    }
-    
-    return columnIndex
+    return Utils_.getColumnIndex({
+      sheet: taskListSheet,
+      columnName: columnName,
+      required: required,
+      headers: headers,
+    })
     
   } // onFormSubmit_.getColumnIndex()
+
+  /**
+   * Convert the row of data containing the new task into an object
+   * 
+   * @return {Object} data
+   */
+   
+  function getTextDate() {
+    
+    Log_.functionEntryPoint()
+    
+    var data = {}
+    var row = allRows[rowIndex]
+    var headers = allRows[0]
+    
+    for (var columnIndex = 0; columnIndex < headers.length; columnIndex++) {
+      var header = headers[columnIndex]
+      data[header] = row[columnIndex]
+    }
+    
+    Log_.fine('data: %s', data)
+    return data
+          
+  } // onFormSubmit_.getTextDate()
 
   /**
    * @return {number} the next ID to use or null
@@ -1194,8 +1190,6 @@ function onEdit_(event) {
     throw new Error('Force onEdit() error for testing.')
   }
   
-  Utils_.postAnalytics(functionName)
-  
   // Get some info about the event.
   var sheet = event.source.getActiveSheet()
   var range = event.source.getActiveRange()
@@ -1205,25 +1199,30 @@ function onEdit_(event) {
     return
   }
   
-  var colIndex = range.getColumn()
-  var rowIndex = range.getRow()
+  var columnNumber = range.getColumn()
+  var rowNumber = range.getRow()
   
-  Log_.fine("row:" + rowIndex + " col:" + colIndex)
+  Log_.fine("row:" + rowNumber + " col:" + columnNumber)
   
   // Record the "started" and "closed" date
   // --------------------------------------
   
-  if (colIndex === Utils_.getColumnPosition(sheet, SS_COL_STATUS)) {
+  var statusColumnNumber = Utils_.getColumnIndex({
+    sheet: sheet, 
+    columnName: TASK_LIST_COLUMNS.STATUS,
+    useMeta: false,
+    required: false}) + 1
+  
+  if (columnNumber === statusColumnNumber) {
     
     var value = range.getValue()
     var now = new Date()
     
     Log_.fine("changed value = " + value)
     
-    if (!Utils_.getCellValue(sheet, rowIndex, SS_COL_TIMESTAMP)) {
+    if (!getCell(TASK_LIST_COLUMNS.TIMESTAMP)) {
       
-      Dialog.show(SCRIPT_NAME, 'There is no task in this row.')
-      Log_.warning('no task in this column (no started date/time)')
+      Log_.warning('No task in this column (no started date/time)')
       return
     }
     
@@ -1232,13 +1231,13 @@ function onEdit_(event) {
     
     if (value === STATUS_IGNORED || value === STATUS_DONE) {
       
-      if (!Utils_.getCellValue(sheet, rowIndex, SS_COL_CLOSED)) {
+      if (!getCell(TASK_LIST_COLUMNS.CLOSED)) {
         
-        Utils_.setCellValue(sheet, rowIndex, SS_COL_CLOSED, now)
+        setCell(TASK_LIST_COLUMNS.CLOSED, now)
         
-        if (!Utils_.getCellValue(sheet, rowIndex, SS_COL_STARTED)) {
+        if (!getCell(TASK_LIST_COLUMNS.STARTED)) {
           
-          Utils_.setCellValue(sheet, rowIndex, SS_COL_STARTED, now)
+          setCell(TASK_LIST_COLUMNS.STARTED, now)
         }
         
       } else {
@@ -1249,9 +1248,9 @@ function onEdit_(event) {
     
     if (value === STATUS_IN_PROGRESS) {
       
-      if (!Utils_.getCellValue(sheet, rowIndex, SS_COL_STARTED)) {
-        
-        Utils_.setCellValue(sheet, rowIndex, SS_COL_STARTED, now)
+      if (!getCell(TASK_LIST_COLUMNS.STARTED)) {
+       
+        setCell(TASK_LIST_COLUMNS.STARTED, now)
         
       } else {
         
@@ -1259,7 +1258,31 @@ function onEdit_(event) {
       }
     } 
   }
-    
+  
+  // Private Functions
+  // -----------------
+  
+  function getCell(columnName) {
+
+    return Utils_.getCellValue(
+      sheet, 
+      rowNumber, 
+      columnName, 
+      false, // DONT_USE_META
+      false) // NOT_REQUIRED
+  }
+
+  function setCell(columnName, value) {
+  
+    Utils_.setCellValue(
+      sheet, 
+      rowNumber, 
+      columnName, 
+      value, 
+      false, // DONT_USE_META
+      false) // NOT_REQUIRED
+  }
+
 } // onEdit_()
 
 /**
@@ -1284,11 +1307,8 @@ function onUninstall_() {
 
   Log_.functionEntryPoint()
 
-  if (PRODUCTION_VERSION) {
-    return
-  }
-    
-  var properties = PropertiesService.getDocumentProperties()
+  var docProperties = PropertiesService.getDocumentProperties()
+  var userProperties = PropertiesService.getUserProperties()  
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet()    
   
   // Form
@@ -1350,8 +1370,18 @@ function onUninstall_() {
     ScriptApp.deleteTrigger(trigger)
     Log_.info('Deleted trigger')      
   })
+
+  // Properties
+  // ----------
+
+  docProperties.deleteProperty(PROPERTY_CALENDAR_TRIGGER_ID)
+  docProperties.deleteProperty(PROPERTY_CALENDAR_ID_NT)
   
-  properties.deleteProperty(PROPERTY_CALENDAR_ID)
+  docProperties.deleteProperty(PROPERTY_STATUS_EMAIL)
+  docProperties.deleteProperty(PROPERTY_NEW_TASK_EMAIL)
+  docProperties.deleteProperty(PROPERTY_EMAIL_FROM)
+  
+  userProperties.deleteProperty(PROPERTY_LAST_AUTH_EMAIL_DATE)
 
   // Menu
   // ----
@@ -1372,3 +1402,82 @@ function onUninstall_() {
   Log_.info('Uninstallation finished')
   
 } // onUninstall_()
+
+/**
+ * Private event handler for "Show Sidebar" event
+ *
+ * @param {Object} 
+ * 
+ * @return {Object} 
+ */
+ 
+function onShowSidebar_() {
+  
+  Log_.functionEntryPoint()
+  
+//  var html = HtmlService.createTemplateFromFile('SlidesMerge_Test').evaluate().setTitle(SCRIPT_NAME)
+
+  var html = HtmlService
+    .createTemplateFromFile('Sidebar')
+    .evaluate()
+    .setTitle(SCRIPT_NAME)
+  
+  SpreadsheetApp.getUi().showSidebar(html)
+  Log_.info('Showing sidebar')
+
+} // onShowSidebar_()
+
+function include(fileName) {
+  return HtmlService.createHtmlOutputFromFile(fileName).getContent()
+}
+
+/**
+ * Get the settings to display in the UI
+ * 
+ * @return {Object} settings
+ */
+
+function onGetSettings_() {  
+
+  Log_.functionEntryPoint()
+
+  var drafts = [DEFAULT_DRAFT_TEXT]
+
+  if (!TEST_FORCE_NO_DRAFTS) {
+    GmailApp.getDraftMessages().forEach(function(draft) {
+      drafts.push(draft.getSubject())
+    }) 
+  }
+
+  if (drafts.length === 0) {
+    Log_.fine('No drafts found using defaults')
+    drafts = [DEFAULT_DRAFT_TEXT]
+  }
+
+  var properties = PropertiesService.getDocumentProperties()
+  
+  var newTaskEmailSubject = properties.getProperty(PROPERTY_NEW_TASK_EMAIL) || ''
+  
+  Log_.fine('newTaskEmailSubject: ' + newTaskEmailSubject)
+
+  var statusEmailSubject = properties.getProperty(PROPERTY_STATUS_EMAIL) || ''
+  
+  Log_.fine('statusEmailSubject: ' + statusEmailSubject)
+
+  var emailFrom = properties.getProperty(PROPERTY_EMAIL_FROM) || SCRIPT_NAME
+  Log_.fine('emailFrom: ' + emailFrom)
+
+  return {
+    drafts: drafts,
+    newTaskEmailSubject: newTaskEmailSubject,
+    statusEmailSubject: statusEmailSubject,
+    emailFrom: emailFrom,
+  }
+  
+} // onGetSettings_()
+
+// Store settings persistently
+
+function onSetNewFrom_(newValue)         {Utils_.setSetting(PROPERTY_EMAIL_FROM, newValue)}
+function onSetNewTaskTemplate_(newValue) {Utils_.setSetting(PROPERTY_NEW_TASK_EMAIL, newValue)}
+function onSetStatusTemplate_(newValue)  {Utils_.setSetting(PROPERTY_STATUS_EMAIL, newValue)}

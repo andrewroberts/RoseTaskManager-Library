@@ -31,37 +31,49 @@ create: function() {
   
   // TODO - This takes 4s
   
-  // Create the calendar for storing regular events/tasks.
+  // Create the calendar for storing regular events/tasks
   
-  var calendars = CalendarApp.getCalendarsByName(REGULAR_TASK_CALENDAR_NAME)
-  var numberOfCalendars = calendars.length
+  var properties = PropertiesService.getDocumentProperties()
+  var calendarId = properties.getProperty(PROPERTY_CALENDAR_ID_NT)
+  var calendar
   
-  if (numberOfCalendars === 0) {
+  if (calendarId !== null) {
+  
+    calendar = CalendarApp.getCalendarById(calendarId)
+    Log_.info('Using existing calendar "' + calendar.getName() + '" (' + calendarId + ')')
     
-    var calendar = CalendarApp.createCalendar(REGULAR_TASK_CALENDAR_NAME)
+  } else { // calendarId === null
+  
+    var calendars = CalendarApp.getCalendarsByName(REGULAR_TASK_CALENDAR_NAME)
+    var numberOfCalendars = calendars.length
     
-    if (calendar) {
+    if (numberOfCalendars === 0) {
       
-      Log_.info('New calendar "' + REGULAR_TASK_CALENDAR_NAME + '" created')
+      calendar = CalendarApp.createCalendar(REGULAR_TASK_CALENDAR_NAME)
       
+      if (calendar !== null) {      
+        Log_.info('New calendar "' + REGULAR_TASK_CALENDAR_NAME + '" created')
+      } else {
+        throw new Error('Failed to create calendar "' + REGULAR_TASK_CALENDAR_NAME + '"')
+      }
+      
+      calendarId = calendar.getId()
+      
+    } else if (numberOfCalendars === 1) {
+    
+      calendarId = calendars[0].getId()
+      
+      Log_.info(
+        'Using existing calendar "' + REGULAR_TASK_CALENDAR_NAME + '"(' + calendarId + ')')
+        
     } else {
-      
-      throw new Error(
-        'Failed to create calendar "' + 
-         REGULAR_TASK_CALENDAR_NAME + '"')
+    
+      throw new Error('There are already more than one calendars called "' + 
+        REGULAR_TASK_CALENDAR_NAME + '". Please delete one and try reinstalling the add-on. ' + 
+        REENABLE_CALENDAR_TEXT)
     }
     
-  } else if (numberOfCalendars === 1) {
-    
-    Log_.warning(
-      'There is already one or more calendars called "' + 
-      REGULAR_TASK_CALENDAR_NAME + '"')
-      
-  } else {
-  
-    throw new Error('There are already more than one calendars called "' + 
-      REGULAR_TASK_CALENDAR_NAME + '". Please delete one and try reinstalling the add-on. ' + 
-      REENABLE_CALENDAR_TEXT)
+    properties.setProperty(PROPERTY_CALENDAR_ID_NT, calendarId)
   }
     
   this.createTrigger()
@@ -79,6 +91,10 @@ convertEventsToTasks: function() {
 
   Log_.functionEntryPoint()
   
+  var ERROR_TEXT_NO_CALENDAR = 'There is no "' + REGULAR_TASK_CALENDAR_NAME + '" calendar. ' + 
+    'Re-create it or uninstall the Rose Task Manager Add-on for GSheets. ' +
+    REENABLE_CALENDAR_TEXT
+      
   try {
 
     if (Utils_.checkIfAuthorizationRequired()) {
@@ -88,23 +104,25 @@ convertEventsToTasks: function() {
       throw new Error('Script needs to be re-authorized. ' + REENABLE_CALENDAR_TEXT)
     }
     
-    var calendars = CalendarApp.getCalendarsByName(REGULAR_TASK_CALENDAR_NAME)
+    var properties = PropertiesService.getDocumentProperties()
+    var calendarId = properties.getProperty(PROPERTY_CALENDAR_ID_NT)
+    var calendar
     
-    if (calendars.length === 0) {
+    if (calendarId === null) {
     
-      throw new Error(
-        'There is no calendar called "' + REGULAR_TASK_CALENDAR_NAME + '". ' + 
-          'Re-create it or uninstall the Rose Task Manager Add-on for GSheets. ' +
-          REENABLE_CALENDAR_TEXT)
+      calendar = getCalendarByName()
+           
+    } else {
+    
+      calendar = CalendarApp.getCalendarById(calendarId)
+            
+      if (calendar === null) {
+        calendar = getCalendarByName()
+      }
     }
-    
-    if (calendars.length > 1) {
-      
-      throw new Error('Found ' + calendars.length + ' calendars ' + 
-        'called ' + REGULAR_TASK_CALENDAR_NAME + 'when there should only be one. ' + 
-        'Please delete or rename one. ' + REENABLE_CALENDAR_TEXT)
-    }
-    
+
+    properties.setProperty(PROPERTY_CALENDAR_ID_NT, calendar.getId())
+
     // Check today's events
     // --------------------
     //
@@ -112,8 +130,7 @@ convertEventsToTasks: function() {
     // defining todays date in terms of UTC to avoid picking up events 
     // either side of today.
     
-    var today = new Date()
-    
+    var today = new Date()   
     var startOfDay = today
     
     startOfDay.setUTCHours(0)
@@ -122,8 +139,9 @@ convertEventsToTasks: function() {
     startOfDay.setMilliseconds(0)  
     
     var endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000)
-    
-    var events = calendars[0].getEvents(startOfDay, endOfDay)
+ 
+    var events = calendar.getEvents(startOfDay, endOfDay)   
+    var eventCount = getEventCount()
     
     if (events.length === 0) {
     
@@ -134,12 +152,17 @@ convertEventsToTasks: function() {
         'No events found in ' + REGULAR_TASK_CALENDAR_NAME + ' calendar today.',
         110)
 */        
-      Log_.info('No events today')
-      
+      Log_.fine('No events today') 
+      eventCount.noEvents++
+      setEventCount()
       return
     } 
-    
-    Log_.info( 
+
+    eventCount.someEvents++
+    eventCount.totalEvents += events.length
+    setEventCount()
+  
+    Log_.fine( 
       'Number of events today: ' + events.length + 
        ' start: ' + startOfDay + 
        ' end: ' + endOfDay)
@@ -163,15 +186,11 @@ convertEventsToTasks: function() {
     var form = FormApp.openById(formId)
     var items = form.getItems()
     
-    for (var eventIndex = 0; eventIndex < events.length; eventIndex++) {
+    events.forEach(function(event) {
       
-      Utils_.postAnalytics('CalendarEvent')
-      
-      // Get the event data.
-      
-      var title = events[eventIndex].getTitle()
-      var description = events[eventIndex].getDescription()
-      var location = events[eventIndex].getLocation()
+      var title = event.getTitle()
+      var description = event.getDescription()
+      var location = event.getLocation()
       
       var response = form.createResponse()
       
@@ -187,9 +206,6 @@ convertEventsToTasks: function() {
       textBoxItem = items[3].asTextItem().createResponse(SCRIPT_NAME)
       response.withItemResponse(textBoxItem)
       
-      textBoxItem = items[4].asTextItem().createResponse(Utils_.getListAdminEmail())
-      response.withItemResponse(textBoxItem)
-      
       textBoxItem = items[5].asParagraphTextItem().createResponse(description)
       response.withItemResponse(textBoxItem)
       
@@ -197,7 +213,7 @@ convertEventsToTasks: function() {
       
       Log_.fine('Simulated a form response')
       
-    } // for each event
+    }) // for each event
     
   } catch(error) {
   
@@ -207,6 +223,90 @@ convertEventsToTasks: function() {
     throw error
   }
   
+  // Private Functions
+  // -----------------
+
+  /**
+   * Get calendars
+   * 
+   * @return {Calendar} RTM calendar
+   */
+   
+  function getCalendarByName() {
+    
+    Log_.functionEntryPoint()
+    
+    var calendars = CalendarApp.getCalendarsByName(REGULAR_TASK_CALENDAR_NAME)
+    
+    if (calendars.length === 0) {
+      throw new Error(ERROR_TEXT_NO_CALENDAR)
+    }
+    
+    if (calendars.length > 1) {
+      
+      throw new Error('Found ' + calendars.length + ' calendars ' + 
+                      'called ' + REGULAR_TASK_CALENDAR_NAME + 'when there should only be one. ' + 
+                      'Please delete or rename one. ' + REENABLE_CALENDAR_TEXT)
+    }
+    
+    return calendars[0]
+    
+  } // Calendar_.convertEventsToTasks.getCalendarByName()
+
+
+  /**
+   * Get the present event count. Logging every calendar trigger fills up the 
+   * log, so they are just counted instead
+   * 
+   * @return {Object} eventCount
+   */
+   
+  function getEventCount() {
+    
+    Log_.functionEntryPoint()
+    
+    var eventCount = PropertiesService
+      .getScriptProperties()
+      .getProperty(PROPERTY_CALENDAR_TRIGGER_COUNT)
+    
+    if (eventCount === null) {
+    
+      eventCount = { 
+        noEvents: 0,
+        someEvents: 0, 
+        totalEvents: 0 
+      }
+      
+      Log_.fine('Initialised eventCount')
+      
+    } else {
+  
+      Log_.fine('eventCount: ' + eventCount)
+      eventCount = JSON.parse(eventCount)
+    }
+    
+    return eventCount 
+      
+  } // Calendar_.convertEventsToTasks.getEventCount()
+  
+  /**
+   * Set the present event count. Logging every calendar trigger fills up the 
+   * log, so they are just counted instead
+   * 
+   * @param {Object} eventCount
+   */
+   
+  function setEventCount() {
+    
+    Log_.functionEntryPoint()
+    Log_.fine('Setting event count: ' + JSON.stringify(eventCount))
+    
+    PropertiesService
+      .getScriptProperties()
+      .setProperty(PROPERTY_CALENDAR_TRIGGER_COUNT, JSON.stringify(eventCount))
+      
+  } // Calendar_.convertEventsToTasks.setEventCount()
+
 }, // Calendar_.convertEventsToTasks()
 
 /**
@@ -228,7 +328,7 @@ createTrigger: function() {
 
       Log_.warning('deleting calendar trigger: ' + trigger.getUniqueId())
       ScriptApp.deleteTrigger(trigger)
-      properties.deleteProperty(PROPERTY_CALENDAR_ID)
+      properties.deleteProperty(PROPERTY_CALENDAR_TRIGGER_ID)
     }
   })
   
@@ -243,7 +343,7 @@ createTrigger: function() {
         .create()
       .getUniqueId()
     
-    properties.setProperty(PROPERTY_CALENDAR_ID, triggerId)
+    properties.setProperty(PROPERTY_CALENDAR_TRIGGER_ID, triggerId)
     
     Log_.info('New calendar trigger created: ' + triggerId)
     
@@ -274,7 +374,7 @@ deleteTrigger: function(calledWithUI) {
     if (trigger.getHandlerFunction() === 'onCalendarTrigger') {
     
       ScriptApp.deleteTrigger(trigger)
-      properties.deleteProperty(PROPERTY_CALENDAR_ID)
+      properties.deleteProperty(PROPERTY_CALENDAR_TRIGGER_ID)
       Log_.warning('deleted old calendar trigger')
     }
   })
@@ -286,5 +386,27 @@ deleteTrigger: function(calledWithUI) {
   }
     
 }, // Calendar_.deleteTrigger()
+
+/**
+ * Dump event count
+ */
+ 
+dumpEventCount: function () {
+  
+  Log_.functionEntryPoint()
+  
+  var properties = PropertiesService.getScriptProperties()
+  
+  var nullEventCount = JSON.stringify({
+    noEvents: 0,
+    someEvents: 0,
+    totalEvents: 0
+  })
+  
+  var eventCount = properties.getProperty(PROPERTY_CALENDAR_TRIGGER_COUNT) || nullEventCount
+  Log_.info('Event Count: ' + eventCount)
+  properties.deleteProperty(PROPERTY_CALENDAR_TRIGGER_COUNT)
+
+} // Calendar_.dumpEventCount()
 
 } // Calendar_

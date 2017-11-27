@@ -1,0 +1,151 @@
+<script>
+
+var Ui = (function (ns) {
+
+  ns.settings = {};
+  
+  ns.doElementer = function() {
+
+    google.script.run
+      .withSuccessHandler(ns.createElementer)
+      .withFailureHandler(ns.error)
+      .onGetSettings()
+  }
+
+  /**
+   *
+   */
+
+  ns.createElementer = function(settings) {
+    
+    var setup = ns.getSetup(settings);
+
+    ns.settings.elementer = new Elementer()
+      .setMain('')
+      .setContainer('elementer-content')
+      .setRoot('elementer-root')
+      .setLayout(setup.layout)
+      .setDetail(setup.detail)
+      .build();
+    
+    DomUtils.hide("spinner", true) 
+
+  }; // Ui.doElementer()
+
+  /**
+   *
+   */
+
+  ns.getSetup = function(settings) {
+  
+    return {
+    
+      detail: {
+      
+        whoSentFromHeader: {
+          template: "subheadTemplate",
+          label: "Email From",
+        },
+
+        whoSentFrom: {    
+          template: "wideTemplate",
+          label: "Email From",
+          icon: "label",
+          values: {
+            value: settings.emailFrom
+          },          
+          on: {
+            change: function (elementer, branch, ob, e) {   
+              var newValue = elementer.getCurrent().whoSentFrom
+              google.script.run
+                .withFailureHandler(ns.error)
+                .onSetNewFrom(newValue)
+            },
+          },
+        },
+
+        draftEmailHeader: {
+          template: "dividerTemplate",
+          label: "Email Templates",
+        },
+/*
+        chooseTemplate: {
+          template: "contentTemplate",
+          label: "Choose a draft GMail to use as a template for email notifications.",
+        },
+*/     
+        newTaskTemplate: {
+          template: "selectTemplate",
+          label: "New task",
+          icon: "drafts",
+          options: settings.drafts,
+          values: {
+            value: settings.newTaskEmailSubject
+//              value: 'Test Value 1'          
+          },
+          on: {
+            change: function (elementer, branch, ob, e) {   
+              var newValue = elementer.getCurrent().newTaskTemplate
+              google.script.run
+                .withFailureHandler(ns.error)
+                .onSetNewTaskTemplate(newValue)
+            }
+          }        
+        },                    
+        
+        statusUpdateTemplate: {
+          template: "selectTemplate",
+          label: "Status Update",
+          icon: "drafts",
+          options: settings.drafts,
+          values: {
+            value: settings.statusEmailSubject
+          },
+          on: {
+            change: function (elementer, branch, ob, e) {   
+              var newValue = elementer.getCurrent().statusUpdateTemplate
+              google.script.run
+                .withFailureHandler(ns.error)
+                .onSetStatusTemplate(newValue)
+            }
+          }        
+        },                    
+                
+      },
+      
+      layout: {
+        settings: {
+          prefix: "layout",
+          root: "root"
+        },
+        pages: {
+          root: {
+            label: "Settings",
+            items: [   
+              "whoSentFromHeader",
+              "whoSentFrom",
+              "draftEmailHeader", 
+              "newTaskTemplate", 
+              "statusUpdateTemplate"
+            ]
+          }
+        }
+      }
+      
+    } // return
+    
+  }; // Ui.getSetUp()
+
+  /*
+   *
+   */
+   
+  ns.error = function(error) {
+    App.showNotification('Internal Error', error)
+  } 
+
+  return ns;
+  
+})(Ui || {});
+
+</script>
