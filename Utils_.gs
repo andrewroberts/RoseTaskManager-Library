@@ -184,7 +184,7 @@ setCellValue: function (sheet, rowNumber, columnName, value, useMeta, required) 
 
     sheet.getRange(rowNumber, columnIndex + 1).setValue(value)
     
-    Log_.info('Stored ' + value + ' in row ' + rowNumber)
+    Log_.info('Stored ' + value + ' in row ' + rowNumber + ', column: ' + columnName)
     
     Log_.fine(
       'Wrote value ' + value + ' ' +

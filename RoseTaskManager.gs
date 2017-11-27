@@ -873,8 +873,8 @@ function onEmailStatusUpdates_() {
   
   var templates = Utils_.getEmailTemplates(
     PROPERTY_STATUS_EMAIL, 
-    FORM_SUBJECT_TEMPLATE, 
-    FORM_BODY_TEMPLATE)
+    STATUS_SUBJECT_TEMPLATE, 
+    STATUS_BODY_TEMPLATE)
 
   // Send the status email
   
@@ -912,7 +912,7 @@ function onEmailStatusUpdates_() {
 function onFormSubmit_(event) {
 
   Log_.functionEntryPoint()
-
+  
   if (Utils_.checkIfAuthorizationRequired()) {
     
     // No point continuing, an email to re-auth has already been sent to 
