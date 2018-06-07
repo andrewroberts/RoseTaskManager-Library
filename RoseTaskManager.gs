@@ -809,7 +809,6 @@ function onEmailStatusUpdates_() {
 
   // Check the users row selection
     
-  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet()
   var taskListSheet
   var rowNumber
 

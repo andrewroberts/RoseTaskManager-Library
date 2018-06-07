@@ -5,8 +5,8 @@
 
 (function() {"use strict"})()
 
-// GasTemplate.gs
-// ==============
+// MetaData_.gs
+// ============
 
 /*
  * Copyright (C) 2015-2018 Andrew Roberts
@@ -79,7 +79,7 @@ var MetaData_ = (function myFunction(ns) {
     var result = Sheets.Spreadsheets.batchUpdate({requests:requests}, spreadsheetId)
     return result
   
-  } // MetaData_.addMetaData()
+  } // MetaData_.add()
     
   /**
    * Get some meta data from a GSheet
