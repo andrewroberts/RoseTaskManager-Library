@@ -40,6 +40,12 @@ create: function() {
   if (calendarId !== null) {
   
     calendar = CalendarApp.getCalendarById(calendarId)
+    
+    if (calendar === null) {
+      properties.deleteProperty(PROPERTY_CALENDAR_ID_NT)
+      throw new Error('A previously created calendar (' + calendarId + ') can no longer be found')
+    }
+    
     Log_.info('Using existing calendar "' + calendar.getName() + '" (' + calendarId + ')')
     
   } else { // calendarId === null

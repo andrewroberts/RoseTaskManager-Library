@@ -36,11 +36,11 @@ function test_init() {
 }
 
 function test() {
-  test_init()
-  var a
-  var config = {a:a}
-  if (typeof config.a === 'undefined') throw 'STOP'  
-  return
+  var a = new Date(); // now
+  var b = new Date(2018, 0, 31) // midnight tonight
+  var c = b - a // 25288486 ms
+  var numberOfHours = c / (1000 * 60 * 60) // 7.02 hrs
+  Logger.log(numberOfHours) 
 }
 
 function test_regex1(arg) {
