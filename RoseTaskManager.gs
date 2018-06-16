@@ -456,7 +456,6 @@ function onInstall_() {
     [setupTaskListSheet,    null,                                   'Installing ... created task list'],
     [createCalendar,        null,                                   'Installing ... created calendar'],
     [onOpen_,               {authMode: ScriptApp.AuthMode.LIMITED}, 'Installation finished.'],
-    [displayInstructions,   null,                                   null],
   ]
 
   INSTALLATION_FUNCTIONS.forEach(function(row) {

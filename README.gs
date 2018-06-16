@@ -21,6 +21,16 @@
  * =========
  */
 
+// Version 1.6.2
+// -------------
+
+// * Stop pop-up on installation
+
+// Version 1.6.1
+// -------------
+
+// * Do not use latest version of Assert
+
 // Version 1.6
 // -----------
 
