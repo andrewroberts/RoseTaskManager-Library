@@ -50,7 +50,7 @@
 // ======
 
 var SCRIPT_NAME = 'Rose Task Manager'
-var SCRIPT_VERSION = 'v1.6.2'
+var SCRIPT_VERSION = 'v1.7'
 
 var REGULAR_TASK_CALENDAR_NAME = SCRIPT_NAME
 
@@ -214,6 +214,7 @@ var PROPERTY_STATUS_EMAIL           = SCRIPT_NAME + ' status email template'
 var PROPERTY_NEW_TASK_EMAIL         = SCRIPT_NAME + ' new task email template'
 var PROPERTY_EMAIL_FROM             = SCRIPT_NAME + ' email from'
 var PROPERTY_CALENDAR_TRIGGER_COUNT = SCRIPT_NAME + ' calendar trigger count'
+var PROPERTY_SETUP_OK                = SCRIPT_NAME + ' RTM installed'
 
 // Function Template
 // -----------------
@@ -221,11 +222,11 @@ var PROPERTY_CALENDAR_TRIGGER_COUNT = SCRIPT_NAME + ' calendar trigger count'
 /**
  * 
  *
- * @param {Object} 
+ * @param {object} 
  * 
- * @return {Object} 
+ * @return {object} 
  */
- 
+/* 
 function functionTemplate() {
   
   Log_.functionEntryPoint()
@@ -233,3 +234,4 @@ function functionTemplate() {
   
 
 } // functionTemplate()
+*/

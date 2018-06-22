@@ -55,37 +55,35 @@ var Log_
 // For debug, rather than production builds, lower level functions are exposed
 // in the menu
 
-//   :      [function() {},  '()',      'Failed to ', ],
-
 var EVENT_HANDLERS = {
 
-//                         Initial actions  Name                         onError Message                        Main Functionality
-//                         ---------------  ----                         ---------------                        ------------------
+//                         Name                         onError Message                        Main Functionality
+//                         ----                         ---------------                        ------------------
 
-  onInstall:               [function() {},  'onInstall()',              'Failed to install RTM add-on',         onInstall_],
-  onEmailStatusUpdates:    [function() {},  'onEmailStatusUpdates()',   'Failed to send email status',          onEmailStatusUpdates_],
-  onFormSubmit:            [function() {},  'onFormSubmit()',           'Failed to process form submission',    onFormSubmit_],
-  onEdit:                  [function() {},  'onEdit()',                 'Failed to process edit',               onEdit_],
-  onCalendarTrigger:       [function() {},  'onCalendarTrigger()',      'Failed to check calendar for tasks',   onCalendarTrigger_],
-  onClearLog:              [function() {},  'onClearLog()',             'Failed to clear log',                  onClearLog_],  
-  onUninstall:             [function() {},  'onUninstall()',            'Failed to uninstall',                  onUninstall_],  
-  onDumpConfig:            [function() {},  'onDumpConfig()',           'Failed to dump config',                onDumpConfig_],  
-  onClearConfig:           [function() {},  'onClearConfig()',          'Failed to clear config',               onClearConfig_],  
-  onThrowError:            [function() {},  'onThrowError()',           'Deliberatley threw error',             onThrowError_],  
-  onStartCalendarTrigger:  [function() {},  'onStartCalendarTrigger()', 'Failed to start calendar trigger',     onStartCalendarTrigger_],    
-  onStopCalendarTrigger:   [function() {},  'onStopCalendarTrigger()',  'Failed to stop calendar trigger',      onStopCalendarTrigger_],       
-  onTest:                  [function() {},  'onTest()',                  'Failed to run test',                  onTest_],      
-  onShowSidebar:           [function() {},  'onShowSidebar()',           'Failed to show sidebar',              onShowSidebar_],        
-  onGetSettings:           [function() {},  'onGetSettings()',           'Failed to get menu',                  onGetSettings_],        
-  onSetNewTaskTemplate:    [function() {},  'onSetNewTaskTemplate()',    'Failed to set new task template',     onSetNewTaskTemplate_],          
-  onSetStatusTemplate:     [function() {},  'onSetStatusTemplate()',     'Failed to set status value',          onSetStatusTemplate_],          
-  onSetNewFrom:            [function() {},  'onSetNewFrom()',            'Failed to set email from',            onSetNewFrom_],          
-  onDumpEventCount:        [function() {},  'onDumpEventCount()',        'Failed to dump event count',          onDumpEventCount_],          
+  onInstall:               ['onInstall()',              'Failed to install RTM add-on',         onInstall_],
+  onSetup:                 ['onSetup()',                'Failed to install RTM add-on',         onSetup_],
+  onEmailStatusUpdates:    ['onEmailStatusUpdates()',   'Failed to send email status',          onEmailStatusUpdates_],
+  onFormSubmit:            ['onFormSubmit()',           'Failed to process form submission',    onFormSubmit_],
+  onEdit:                  ['onEdit()',                 'Failed to process edit',               onEdit_],
+  onCalendarTrigger:       ['onCalendarTrigger()',      'Failed to check calendar for tasks',   onCalendarTrigger_],
+  onClearLog:              ['onClearLog()',             'Failed to clear log',                  onClearLog_],  
+  onUninstall:             ['onUninstall()',            'Failed to uninstall',                  onUninstall_],  
+  onDumpConfig:            ['onDumpConfig()',           'Failed to dump config',                onDumpConfig_],  
+  onClearConfig:           ['onClearConfig()',          'Failed to clear config',               onClearConfig_],  
+  onThrowError:            ['onThrowError()',           'Deliberatley threw error',             onThrowError_],  
+  onStartCalendarTrigger:  ['onStartCalendarTrigger()', 'Failed to start calendar trigger',     onStartCalendarTrigger_],    
+  onStopCalendarTrigger:   ['onStopCalendarTrigger()',  'Failed to stop calendar trigger',      onStopCalendarTrigger_],       
+  onTest:                  ['onTest()',                 'Failed to run test',                   onTest_],      
+  onShowSidebar:           ['onShowSidebar()',          'Failed to show sidebar',               onShowSidebar_],        
+  onGetSettings:           ['onGetSettings()',          'Failed to get menu',                   onGetSettings_],        
+  onSetNewTaskTemplate:    ['onSetNewTaskTemplate()',   'Failed to set new task template',      onSetNewTaskTemplate_],          
+  onSetStatusTemplate:     ['onSetStatusTemplate()',    'Failed to set status value',           onSetStatusTemplate_],          
+  onSetNewFrom:            ['onSetNewFrom()',           'Failed to set email from',             onSetNewFrom_],          
+  onDumpEventCount:        ['onDumpEventCount()',       'Failed to dump event count',           onDumpEventCount_],          
 }
 
-// function (arg)                     {return eventHandler_(EVENT_HANDLERS., arg)}
-
 function onInstall(arg)              {return eventHandler_(EVENT_HANDLERS.onInstall, arg)}
+function onSetup(arg)                {return eventHandler_(EVENT_HANDLERS.onSetup, arg)}
 function onEmailStatusUpdates(arg)   {return eventHandler_(EVENT_HANDLERS.onEmailStatusUpdates, arg)}
 function onFormSubmit(arg)           {return eventHandler_(EVENT_HANDLERS.onFormSubmit, arg)}
 function onEdit(arg)                 {return eventHandler_(EVENT_HANDLERS.onEdit, arg)}
@@ -158,9 +156,6 @@ function eventHandler_(config, arg) {
 
   try {
 
-    // Any early functionality that is needed
-    config[0]()
-    
     Log_ = getLog()
 
     var userEmail = Session.getActiveUser().getEmail()
@@ -168,15 +163,15 @@ function eventHandler_(config, arg) {
     initializeAssertLibrary()
     
     // Comment this out as it runs too often on all the calendar checks
-//    Log_.info('Handling ' + config[1] + ' from ' + userEmail)
+//    Log_.info('Handling ' + config[0] + ' from ' + userEmail)
 
-    return config[3](arg)
+    return config[2](arg)
     
   } catch (error) {
 
     if (typeof Log_ !== 'undefined') {
       Log_.fine('Caught error: %s', error)
-      Assert.handleError(error, config[2], Log_)  
+      Assert.handleError(error, config[1], Log_)  
     }
   }
   
@@ -377,37 +372,55 @@ function onOpen_(event) {
   if (TEST_FORCE_OPEN_ERROR) {
     throw new Error('Force onOpen() error for testing.')
   }
-
-  var menu = SpreadsheetApp
-    .getUi()
-    .createMenu(SCRIPT_NAME)
-    .addItem('Send status email', 'onEmailStatusUpdates')
-    .addItem('Check calendar for tasks', 'onCalendarTrigger')
     
-  if (event) {
-  
-    if (event.authMode !== ScriptApp.AuthMode.NONE) {
-   
-      var calendarTriggerId = PropertiesService
-        .getDocumentProperties()
-        .getProperty(PROPERTY_CALENDAR_TRIGGER_ID)
-      
-      if (calendarTriggerId === null) {
-        
-        menu.addItem('Enable daily calendar check', 'onStartCalendarTrigger')
-        
-      } else {
-        
-        menu.addItem('Disable daily calendar check', 'onStopCalendarTrigger');
-      }  
-    }
+  if (!event) {
+    Log_.warning('No "open" event')
   }
     
+  var calendarTriggerEnabled = false
+  var rtmSetup = false
+  
+  if (event.authMode === ScriptApp.AuthMode.FULL) {
+    
+    var properties = PropertiesService.getDocumentProperties()
+    
+    if (properties.getProperty(PROPERTY_SETUP_OK) === 'true') {
+    
+      rtmSetup = true
+                  
+      if (properties.getProperty(PROPERTY_CALENDAR_TRIGGER_ID) !== null) {   
+        calendarTriggerEnabled = true
+      }
+      
+    } else {
+    
+      Log_.fine('Full auth before RTM Setup??')
+    }
+  } 
+    
   // TODO - Add 'display calendar' & 'display form'
+
+  var menu = SpreadsheetApp.getUi().createMenu(SCRIPT_NAME)
   
-    menu.addSeparator()
-      .addItem('Settings', 'onShowSidebar')
+  if (!rtmSetup) {
   
+    menu.addItem('Install', 'onSetup')
+  
+  } else {
+  
+    menu
+      .addItem('Send status email', 'onEmailStatusUpdates')
+      .addItem('Check calendar for tasks', 'onCalendarTrigger')
+  
+    if (calendarTriggerEnabled) {
+      menu.addItem('Disable daily calendar check', 'onStopCalendarTrigger')
+    } else {
+      menu.addItem('Enable daily calendar check', 'onStartCalendarTrigger')    
+    }
+    
+    menu.addSeparator().addItem('Settings', 'onShowSidebar')
+  }
+
   if (!PRODUCTION_VERSION) {
     
     menu
@@ -429,15 +442,30 @@ function onOpen_(event) {
 
 /**
  * Installation event handler
+ *
+ * @param {object} 
+ * 
+ * @return {object} 
+ */
+ 
+function onInstall_() {
+  
+  Log_.functionEntryPoint()
+  onOpen_()
+  
+} // onInstall_()
+
+/**
+ * Setup event handler
  */
 
 // TODO - Check that we have permission to run this
 // TODO - Create formatted log sheet
 
-function onInstall_() {
+function onSetup_() {
 
   Log_.functionEntryPoint()
-  var functionName = 'onInstall_()'
+  var functionName = 'onSetup_()'
   
   Log_.info('Installing...')
   
@@ -455,7 +483,9 @@ function onInstall_() {
     [createRequestForm,     null,                                   'Installing ... created form'],
     [setupTaskListSheet,    null,                                   'Installing ... created task list'],
     [createCalendar,        null,                                   'Installing ... created calendar'],
-    [onOpen_,               {authMode: ScriptApp.AuthMode.LIMITED}, 'Installation finished.'],
+    [setSetupFlag,          null,                                   'Installing ... '],
+    [displayInstructions,   null,                                   'Installing ... displaying instructions'],    
+    [onOpen_,               {authMode: ScriptApp.AuthMode.FULL},    'Installation finished.'],    
   ]
 
   INSTALLATION_FUNCTIONS.forEach(function(row) {
@@ -530,7 +560,7 @@ function onInstall_() {
     
     Log_.info('Task request form and trigger created')
     
-  } // onInstall.createRequestForm()
+  } // onSetup_.createRequestForm()
   
   /**
    * Format the task list spreadsheet so it can hold other data other
@@ -755,7 +785,7 @@ function onInstall_() {
     SpreadsheetApp.setActiveSheet(taskListSheet)
     Log_.info('"' + TASK_LIST_WORK_SHEET_NAME + '" sheet setup')
     
-  } // onInstall_.setupTaskListSheet()
+  } // onSetup_.setupTaskListSheet()
   
   /**
    * Create Calendar
@@ -766,7 +796,15 @@ function onInstall_() {
     Log_.functionEntryPoint()
     Calendar_.create()
   
-  } // onInstall_.createCalendar()
+  } // onSetup_.createCalendar()
+
+  /**
+   * set 'Setup'Flag
+   */
+
+  function setSetupFlag() {
+    PropertiesService.getDocumentProperties().setProperty(PROPERTY_SETUP_OK, 'true')
+  }
 
   /**
    * Display instructions once the add-on is installed.
@@ -781,11 +819,11 @@ function onInstall_() {
     
     SpreadsheetApp
       .getUi()
-      .showModalDialog(htmlOutput, SCRIPT_NAME)
+      .showModelessDialog(htmlOutput, SCRIPT_NAME)
   
-  } // onInstall.displayInstructions()
+  } // onSetup_.displayInstructions()
     
-} // onInstall()
+} // onSetup_()
 
 /** 
  * Send an email status update
@@ -1378,6 +1416,7 @@ function onUninstall_() {
   docProperties.deleteProperty(PROPERTY_STATUS_EMAIL)
   docProperties.deleteProperty(PROPERTY_NEW_TASK_EMAIL)
   docProperties.deleteProperty(PROPERTY_EMAIL_FROM)
+  docProperties.deleteProperty(PROPERTY_SETUP_OK)
   
   userProperties.deleteProperty(PROPERTY_LAST_AUTH_EMAIL_DATE)
 
