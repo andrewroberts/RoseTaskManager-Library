@@ -21,6 +21,11 @@
  * =========
  */
 
+// Version 1.7
+// -----------
+
+// * Disable automatic installation
+
 // Version 1.6.2
 // -------------
 
