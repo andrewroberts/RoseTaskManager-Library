@@ -60,6 +60,7 @@ var EVENT_HANDLERS = {
 //                         Name                         onError Message                        Main Functionality
 //                         ----                         ---------------                        ------------------
 
+  onInstall:               ['onInstall()',              'Failed to install RTM add-on',         onInstall_],
   onSetup:                 ['onSetup()',                'Failed to install RTM add-on',         onSetup_],
   onEmailStatusUpdates:    ['onEmailStatusUpdates()',   'Failed to send email status',          onEmailStatusUpdates_],
   onFormSubmit:            ['onFormSubmit()',           'Failed to process form submission',    onFormSubmit_],
@@ -81,6 +82,7 @@ var EVENT_HANDLERS = {
   onDumpEventCount:        ['onDumpEventCount()',       'Failed to dump event count',           onDumpEventCount_],          
 }
 
+function onInstall(arg)              {return eventHandler_(EVENT_HANDLERS.onInstall, arg)}
 function onSetup(arg)                {return eventHandler_(EVENT_HANDLERS.onSetup, arg)}
 function onEmailStatusUpdates(arg)   {return eventHandler_(EVENT_HANDLERS.onEmailStatusUpdates, arg)}
 function onFormSubmit(arg)           {return eventHandler_(EVENT_HANDLERS.onFormSubmit, arg)}
@@ -101,8 +103,7 @@ function onSetStatusTemplate(arg)    {return eventHandler_(EVENT_HANDLERS.onSetS
 function onSetNewFrom(arg)           {return eventHandler_(EVENT_HANDLERS.onSetNewFrom, arg)}
 function onDumpEventCount(arg)       {return eventHandler_(EVENT_HANDLERS.onDumpEventCount, arg)}
 
-function onInstall(event) {onInstall_(event)}
-function onOpen(event)    {onOpen_(event)}
+function onOpen(event) {onOpen_(event)}
 
 // Private Functions
 // =================
@@ -371,26 +372,31 @@ function onOpen_(event) {
   if (TEST_FORCE_OPEN_ERROR) {
     throw new Error('Force onOpen() error for testing.')
   }
-
+    
+  if (!event) {
+    Log_.warning('No "open" event')
+  }
+    
   var calendarTriggerEnabled = false
   var rtmSetup = false
   
-  if (event) {
-  
-    if (event.hasOwnProperty('authMode') && event.authMode === ScriptApp.AuthMode.FULL) {
-  
-      var properties = PropertiesService.getDocumentProperties()
-      
-      if (properties.getProperty(PROPERTY_SETUP_OK) === 'true') {
-        
-        rtmSetup = true
-        
-        if (properties.getProperty(PROPERTY_CALENDAR_TRIGGER_ID) !== null) {   
-          calendarTriggerEnabled = true
-        } 
+  if (event.authMode === ScriptApp.AuthMode.FULL) {
+    
+    var properties = PropertiesService.getDocumentProperties()
+    
+    if (properties.getProperty(PROPERTY_SETUP_OK) === 'true') {
+    
+      rtmSetup = true
+                  
+      if (properties.getProperty(PROPERTY_CALENDAR_TRIGGER_ID) !== null) {   
+        calendarTriggerEnabled = true
       }
-    } 
-  }
+      
+    } else {
+    
+      Log_.fine('Full auth before RTM Setup??')
+    }
+  } 
     
   // TODO - Add 'display calendar' & 'display form'
 
@@ -442,8 +448,11 @@ function onOpen_(event) {
  * @return {object} 
  */
  
-function onInstall_() {  
+function onInstall_() {
+  
+  Log_.functionEntryPoint()
   onOpen_()
+  
 } // onInstall_()
 
 /**
