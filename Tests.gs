@@ -36,11 +36,9 @@ function test_init() {
 }
 
 function test() {
-  var a = new Date(); // now
-  var b = new Date(2018, 0, 31) // midnight tonight
-  var c = b - a // 25288486 ms
-  var numberOfHours = c / (1000 * 60 * 60) // 7.02 hrs
-  Logger.log(numberOfHours) 
+  var object1 = new Object();
+  object1.property1 = 42;
+  Logger.log(object1.hasOwnProperty('property1'));
 }
 
 function test_regex1(arg) {

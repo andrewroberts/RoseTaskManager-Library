@@ -21,6 +21,16 @@
  * =========
  */
 
+// Version 1.9
+// -----------
+
+// * Specify specific scopes in manifest file
+
+// Version 1.8.1
+// -------------
+
+// * ??
+
 // Version 1.7
 // -----------
 
