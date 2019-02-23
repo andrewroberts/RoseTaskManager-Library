@@ -153,6 +153,8 @@ function onDumpEventCount_()       {Calendar_.dumpEventCount()}
 
 function eventHandler_(config, arg) {
 
+  console.log(JSON.stringify(arg))
+
   try {
 
     Log_ = getLog()
@@ -281,8 +283,9 @@ function eventHandler_(config, arg) {
 
     } else {
     
-      Log_.fine('arg: ' + JSON.stringify(arg))      
-
+      Log_.fine('arg: ' + JSON.stringify(arg)) 
+      Log_.fine('typeof arg: ' + typeof arg) 
+      
       // The arg is only defined for triggers - built-in or installable,
       // but we still need to tell the difference as they have different 
       // authority
@@ -377,17 +380,20 @@ function onOpen_(event) {
   
   if (event) {
   
-    if (event.hasOwnProperty('authMode') && event.authMode === ScriptApp.AuthMode.FULL) {
+    if (event.hasOwnProperty('authMode')) {
+    
+      if (event.authMode !== ScriptApp.AuthMode.NONE) {
   
-      var properties = PropertiesService.getDocumentProperties()
-      
-      if (properties.getProperty(PROPERTY_SETUP_OK) === 'true') {
+        var properties = PropertiesService.getDocumentProperties()
         
-        rtmSetup = true
-        
-        if (properties.getProperty(PROPERTY_CALENDAR_TRIGGER_ID) !== null) {   
-          calendarTriggerEnabled = true
-        } 
+        if (properties.getProperty(PROPERTY_SETUP_OK) === 'true') {
+          
+          rtmSetup = true
+          
+          if (properties.getProperty(PROPERTY_CALENDAR_TRIGGER_ID) !== null) {   
+            calendarTriggerEnabled = true
+          } 
+        }        
       }
     } 
   }
