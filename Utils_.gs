@@ -465,7 +465,7 @@ getEmailTemplates: function(propertyName, defaultSubjectTemplate, defaultBodyTem
   var templateSubject = PropertiesService
     .getDocumentProperties()
     .getProperty(propertyName)
-
+   
   if (templateSubject === null || templateSubject === DEFAULT_DRAFT_TEXT) {
   
     Log_.info('Email template not available (' + propertyName + '), using default')
@@ -475,8 +475,13 @@ getEmailTemplates: function(propertyName, defaultSubjectTemplate, defaultBodyTem
     
   } else {
   
-    // Accessing email drafts removed in v1.10 to avoid having to get security check
-      
+    GmailApp.getDraftMessages().some(function(nextDraft) {
+      if (nextDraft.getSubject() === templateSubject) {
+        draft = nextDraft
+        return true
+      }
+    })
+  
     if (draft === null) {
     
       Log_.warning('Could not find the GMail draft (' + propertyName + ') so using default')
