@@ -161,8 +161,6 @@ function eventHandler_(config, arg) {
 
     var userEmail = Session.getActiveUser().getEmail()
 
-    initializeAssertLibrary()
-    
     // Comment this out as it runs too often on all the calendar checks
 //    Log_.info('Handling ' + config[0] + ' from ' + userEmail)
 
@@ -171,8 +169,10 @@ function eventHandler_(config, arg) {
   } catch (error) {
 
     if (typeof Log_ !== 'undefined') {
+
+      var assertConfig = initializeAssertLibrary()
       Log_.fine('Caught error: %s', error)
-      Assert.handleError(error, config[1], Log_)  
+      Assert.handleError(assertConfig)   
     }
   }
   
@@ -356,6 +356,19 @@ function eventHandler_(config, arg) {
       scriptName: SCRIPT_NAME,
       scriptVersion: SCRIPT_VERSION, 
     })
+
+    var assertConfig = {
+      error:          error,
+      userMessage:    config[1],
+      log:            Log_,
+      handleError:    handleError, 
+      sendErrorEmail: SEND_ERROR_EMAIL_, 
+      emailAddress:   ADMIN_EMAIL_ADDRESS_,
+      scriptName:     SCRIPT_NAME,
+      scriptVersion:  SCRIPT_VERSION, 
+    }
+
+    return assertConfig
     
   } // eventHandler_.initializeAssertLibrary()
   
@@ -1477,16 +1490,7 @@ function onGetSettings_() {
 
   var drafts = [DEFAULT_DRAFT_TEXT]
 
-  if (!TEST_FORCE_NO_DRAFTS) {
-    GmailApp.getDraftMessages().forEach(function(draft) {
-      drafts.push(draft.getSubject())
-    }) 
-  }
-
-  if (drafts.length === 0) {
-    Log_.fine('No drafts found using defaults')
-    drafts = [DEFAULT_DRAFT_TEXT]
-  }
+  // Accessing email drafts removed in v1.10 to avoid having to get security check
 
   var properties = PropertiesService.getDocumentProperties()
   
