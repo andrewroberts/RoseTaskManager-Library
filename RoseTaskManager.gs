@@ -194,52 +194,7 @@ function eventHandler_(config, arg) {
 
     if (PRODUCTION_VERSION) {
         
-      var firebaseUrl = PropertiesService
-        .getScriptProperties()
-        .getProperty('FIREBASE_URL')
-        
-      var firebaseSecret = PropertiesService
-        .getScriptProperties()
-        .getProperty('FIREBASE_SECRET')  
-        
-      if (firebaseUrl !== null && firebaseSecret !== null) {
-      
-        var userLog = BBLog.getLog({lock: lock}); 
-            
-        var masterLog = BBLog.getLog({
-          sheetId: null, // No GSheet
-          displayUserId: BBLog.DisplayUserId.USER_KEY_FULL,
-          firebaseUrl: firebaseUrl,
-          firebaseSecret: firebaseSecret
-        })
-      
-        log = {
-        
-          clear: function() {
-            userLog.clear();
-            masterLog.clear();      
-          },
-          
-          info: function() {
-            userLog.info.apply(userLog, arguments);
-            masterLog.info.apply(masterLog, arguments);          
-          },      
-          
-          warning: function() {
-            userLog.warning.apply(userLog, arguments);
-            masterLog.warning.apply(masterLog, arguments);          
-          },
-    
-          severe: function() {
-            userLog.severe.apply(userLog, arguments);
-            masterLog.severe.apply(masterLog, arguments);          
-          }
-        }
-        
-      } else {
-
-        log = BBLog.getLog({lock: lock});         
-      }
+      log = BBLog.getLog({lock: lock});         
       
       log.functionEntryPoint = function() {},
       log.fine = function() {}
@@ -383,7 +338,9 @@ function eventHandler_(config, arg) {
  */
 
 function onOpen_(event) {
-    
+
+  console.log(SCRIPT_VERSION)
+
   if (TEST_FORCE_OPEN_ERROR) {
     throw new Error('Force onOpen() error for testing.')
   }
@@ -1490,7 +1447,16 @@ function onGetSettings_() {
 
   var drafts = [DEFAULT_DRAFT_TEXT]
 
-  // Accessing email drafts removed in v1.10 to avoid having to get security check
+  if (!TEST_FORCE_NO_DRAFTS) {
+    GmailApp.getDraftMessages().forEach(function(draft) {
+      drafts.push(draft.getSubject())
+    }) 
+  }
+
+  if (drafts.length === 0) {
+    Log_.fine('No drafts found using defaults')
+    drafts = [DEFAULT_DRAFT_TEXT]
+  }
 
   var properties = PropertiesService.getDocumentProperties()
   
