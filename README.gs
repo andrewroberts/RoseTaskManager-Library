@@ -21,8 +21,13 @@
  * =========
  */
 
+// Version 1.13
+// ------------
+
+// * Redeuce trace onEdit
+
 // Version 1.12
-// -----------
+// ------------
 
 // * Add GMail back in, but remove Firebase ref to get rid of UrlFetch 
 

@@ -153,7 +153,8 @@ function onDumpEventCount_()       {Calendar_.dumpEventCount()}
 
 function eventHandler_(config, arg) {
 
-  console.log(JSON.stringify(arg))
+// This creates too much noise!
+//  console.log(JSON.stringify(arg))
 
   try {
 
@@ -1198,7 +1199,7 @@ function onEdit_(event) {
   var range = event.source.getActiveRange()
   
   if (sheet.getName() !== TASK_LIST_WORK_SHEET_NAME) {
-    Log_.warning('Ignoring edit: not in "' + TASK_LIST_WORK_SHEET_NAME + '" sheet')
+    Log_.fine('Ignoring edit: not in "' + TASK_LIST_WORK_SHEET_NAME + '" sheet')
     return
   }
   
