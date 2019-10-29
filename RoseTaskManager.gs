@@ -153,7 +153,8 @@ function onDumpEventCount_()       {Calendar_.dumpEventCount()}
 
 function eventHandler_(config, arg) {
 
-  console.log(JSON.stringify(arg))
+// This creates too much noise!
+//  console.log(JSON.stringify(arg))
 
   try {
 
@@ -169,10 +170,14 @@ function eventHandler_(config, arg) {
   } catch (error) {
 
     if (typeof Log_ !== 'undefined') {
-
+    
       var assertConfig = initializeAssertLibrary()
       Log_.fine('Caught error: %s', error)
       Assert.handleError(assertConfig)   
+      
+    } else {
+    
+      throw error
     }
   }
   
@@ -304,21 +309,13 @@ function eventHandler_(config, arg) {
     Log_.fine('sendErrorEmail: ' + sendErrorEmail)
     Log_.fine('adminEmailAddress: ' + adminEmailAddress)
 
-    Assert.init({
-      handleError: handleError,
-      sendErrorEmail: sendErrorEmail, 
-      emailAddress: adminEmailAddress,
-      scriptName: SCRIPT_NAME,
-      scriptVersion: SCRIPT_VERSION, 
-    })
-
     var assertConfig = {
       error:          error,
       userMessage:    config[1],
       log:            Log_,
       handleError:    handleError, 
-      sendErrorEmail: SEND_ERROR_EMAIL_, 
-      emailAddress:   ADMIN_EMAIL_ADDRESS_,
+      sendErrorEmail: sendErrorEmail, 
+      emailAddress:   adminEmailAddress,
       scriptName:     SCRIPT_NAME,
       scriptVersion:  SCRIPT_VERSION, 
     }
@@ -1198,7 +1195,7 @@ function onEdit_(event) {
   var range = event.source.getActiveRange()
   
   if (sheet.getName() !== TASK_LIST_WORK_SHEET_NAME) {
-    Log_.warning('Ignoring edit: not in "' + TASK_LIST_WORK_SHEET_NAME + '" sheet')
+    Log_.fine('Ignoring edit: not in "' + TASK_LIST_WORK_SHEET_NAME + '" sheet')
     return
   }
   
