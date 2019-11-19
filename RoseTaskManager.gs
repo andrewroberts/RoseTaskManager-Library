@@ -84,7 +84,6 @@ var EVENT_HANDLERS = {
 function onSetup(arg)                {return eventHandler_(EVENT_HANDLERS.onSetup, arg)}
 function onEmailStatusUpdates(arg)   {return eventHandler_(EVENT_HANDLERS.onEmailStatusUpdates, arg)}
 function onFormSubmit(arg)           {return eventHandler_(EVENT_HANDLERS.onFormSubmit, arg)}
-function onEdit(arg)                 {return eventHandler_(EVENT_HANDLERS.onEdit, arg)}
 function onCalendarTrigger(arg)      {return eventHandler_(EVENT_HANDLERS.onCalendarTrigger, arg)}
 function onClearLog(arg)             {return eventHandler_(EVENT_HANDLERS.onClearLog, arg)}
 function onUninstall(arg)            {return eventHandler_(EVENT_HANDLERS.onUninstall, arg)}
@@ -103,6 +102,7 @@ function onDumpEventCount(arg)       {return eventHandler_(EVENT_HANDLERS.onDump
 
 function onInstall(event) {onInstall_(event)}
 function onOpen(event)    {onOpen_(event)}
+function onEdit(event)    {onEdit_(event)}
 
 // Private Functions
 // =================
@@ -153,7 +153,8 @@ function onDumpEventCount_()       {Calendar_.dumpEventCount()}
 
 function eventHandler_(config, arg) {
 
-  console.log(JSON.stringify(arg))
+// This creates too much noise!
+//  console.log(JSON.stringify(arg))
 
   try {
 
@@ -169,10 +170,14 @@ function eventHandler_(config, arg) {
   } catch (error) {
 
     if (typeof Log_ !== 'undefined') {
-
-      var assertConfig = initializeAssertLibrary()
+    
+      var assertConfig = initializeAssertLibrary(error)
       Log_.fine('Caught error: %s', error)
       Assert.handleError(assertConfig)   
+      
+    } else {
+    
+      throw error
     }
   }
   
@@ -224,7 +229,7 @@ function eventHandler_(config, arg) {
    * Initialize the Assert library
    */
    
-  function initializeAssertLibrary() {
+  function initializeAssertLibrary(error) {
     
     Log_.functionEntryPoint()
     
@@ -289,7 +294,7 @@ function eventHandler_(config, arg) {
       
         // The error is from a built-in trigger from the UI (onEdit() or onOpen()) so
         // tell the user
-        handleError = Assert.HandleError.DISPLAY
+        handleError = Assert.HandleError.DISPLAY_FULL
         Log_.fine('Display errors')
         
       } else {
@@ -304,21 +309,13 @@ function eventHandler_(config, arg) {
     Log_.fine('sendErrorEmail: ' + sendErrorEmail)
     Log_.fine('adminEmailAddress: ' + adminEmailAddress)
 
-    Assert.init({
-      handleError: handleError,
-      sendErrorEmail: sendErrorEmail, 
-      emailAddress: adminEmailAddress,
-      scriptName: SCRIPT_NAME,
-      scriptVersion: SCRIPT_VERSION, 
-    })
-
     var assertConfig = {
       error:          error,
       userMessage:    config[1],
       log:            Log_,
       handleError:    handleError, 
-      sendErrorEmail: SEND_ERROR_EMAIL_, 
-      emailAddress:   ADMIN_EMAIL_ADDRESS_,
+      sendErrorEmail: sendErrorEmail, 
+      emailAddress:   adminEmailAddress,
       scriptName:     SCRIPT_NAME,
       scriptVersion:  SCRIPT_VERSION, 
     }
@@ -1198,7 +1195,7 @@ function onEdit_(event) {
   var range = event.source.getActiveRange()
   
   if (sheet.getName() !== TASK_LIST_WORK_SHEET_NAME) {
-    Log_.warning('Ignoring edit: not in "' + TASK_LIST_WORK_SHEET_NAME + '" sheet')
+    Log_.fine('Ignoring edit: not in "' + TASK_LIST_WORK_SHEET_NAME + '" sheet')
     return
   }
   
