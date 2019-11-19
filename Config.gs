@@ -50,7 +50,7 @@
 // ======
 
 var SCRIPT_NAME = 'Rose Task Manager'
-var SCRIPT_VERSION = 'v1.15'
+var SCRIPT_VERSION = 'v1.16'
 
 var REGULAR_TASK_CALENDAR_NAME = SCRIPT_NAME
 

@@ -84,7 +84,6 @@ var EVENT_HANDLERS = {
 function onSetup(arg)                {return eventHandler_(EVENT_HANDLERS.onSetup, arg)}
 function onEmailStatusUpdates(arg)   {return eventHandler_(EVENT_HANDLERS.onEmailStatusUpdates, arg)}
 function onFormSubmit(arg)           {return eventHandler_(EVENT_HANDLERS.onFormSubmit, arg)}
-function onEdit(arg)                 {return eventHandler_(EVENT_HANDLERS.onEdit, arg)}
 function onCalendarTrigger(arg)      {return eventHandler_(EVENT_HANDLERS.onCalendarTrigger, arg)}
 function onClearLog(arg)             {return eventHandler_(EVENT_HANDLERS.onClearLog, arg)}
 function onUninstall(arg)            {return eventHandler_(EVENT_HANDLERS.onUninstall, arg)}
@@ -103,6 +102,7 @@ function onDumpEventCount(arg)       {return eventHandler_(EVENT_HANDLERS.onDump
 
 function onInstall(event) {onInstall_(event)}
 function onOpen(event)    {onOpen_(event)}
+function onEdit(event)    {onEdit_(event)}
 
 // Private Functions
 // =================
