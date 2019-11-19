@@ -171,7 +171,7 @@ function eventHandler_(config, arg) {
 
     if (typeof Log_ !== 'undefined') {
     
-      var assertConfig = initializeAssertLibrary()
+      var assertConfig = initializeAssertLibrary(error)
       Log_.fine('Caught error: %s', error)
       Assert.handleError(assertConfig)   
       
@@ -229,7 +229,7 @@ function eventHandler_(config, arg) {
    * Initialize the Assert library
    */
    
-  function initializeAssertLibrary() {
+  function initializeAssertLibrary(error) {
     
     Log_.functionEntryPoint()
     
@@ -294,7 +294,7 @@ function eventHandler_(config, arg) {
       
         // The error is from a built-in trigger from the UI (onEdit() or onOpen()) so
         // tell the user
-        handleError = Assert.HandleError.DISPLAY
+        handleError = Assert.HandleError.DISPLAY_FULL
         Log_.fine('Display errors')
         
       } else {
