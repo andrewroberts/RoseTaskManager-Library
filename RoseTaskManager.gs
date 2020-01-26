@@ -1183,7 +1183,7 @@ function onFormSubmit_(event) {
 
 function onEdit_(event) {
 
-  Log_.functionEntryPoint()
+//  Log_.functionEntryPoint()
   var functionName = 'onEdit_()'
   
   if (TEST_FORCE_EDIT_ERROR) {    
@@ -1195,14 +1195,14 @@ function onEdit_(event) {
   var range = event.source.getActiveRange()
   
   if (sheet.getName() !== TASK_LIST_WORK_SHEET_NAME) {
-    Log_.fine('Ignoring edit: not in "' + TASK_LIST_WORK_SHEET_NAME + '" sheet')
+//    Log_.fine('Ignoring edit: not in "' + TASK_LIST_WORK_SHEET_NAME + '" sheet')
     return
   }
   
   var columnNumber = range.getColumn()
   var rowNumber = range.getRow()
   
-  Log_.fine("row:" + rowNumber + " col:" + columnNumber)
+//  Log_.fine("row:" + rowNumber + " col:" + columnNumber)
   
   // Record the "started" and "closed" date
   // --------------------------------------
@@ -1218,11 +1218,11 @@ function onEdit_(event) {
     var value = range.getValue()
     var now = new Date()
     
-    Log_.fine("changed value = " + value)
+//    Log_.fine("changed value = " + value)
     
     if (!getCell(TASK_LIST_COLUMNS.TIMESTAMP)) {
       
-      Log_.warning('No task in this column (no started date/time)')
+//      Log_.warning('No task in this column (no started date/time)')
       return
     }
     
@@ -1242,7 +1242,7 @@ function onEdit_(event) {
         
       } else {
         
-        Log_.warning('There is already a date/time in closed')
+//        Log_.warning('There is already a date/time in closed')
       }
     } 
     
@@ -1254,7 +1254,7 @@ function onEdit_(event) {
         
       } else {
         
-        Log_.warning('There is already a date/time in started')        
+//        Log_.warning('There is already a date/time in started')        
       }
     } 
   }
