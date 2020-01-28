@@ -38,7 +38,15 @@
  * they should all catch errors before displaying them to the user.
  */
 
-var Log_
+var Log_ = {
+  severe: function(){},
+  warning: function(){},
+  info: function(){},
+  fine: function(){},
+  finer: function(){},
+  finest: function(){},
+  functionEntryPoint: function(){}
+}
 
 // Public event handlers
 // ---------------------
@@ -336,7 +344,7 @@ function eventHandler_(config, arg) {
 
 function onOpen_(event) {
 
-  console.log(SCRIPT_VERSION)
+//  console.log(SCRIPT_VERSION)
 
   if (TEST_FORCE_OPEN_ERROR) {
     throw new Error('Force onOpen() error for testing.')
