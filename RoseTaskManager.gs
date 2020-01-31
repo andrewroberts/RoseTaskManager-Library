@@ -38,7 +38,15 @@
  * they should all catch errors before displaying them to the user.
  */
 
-var Log_
+var Log_ = {
+  severe: function(){},
+  warning: function(){},
+  info: function(){},
+  fine: function(){},
+  finer: function(){},
+  finest: function(){},
+  functionEntryPoint: function(){}
+}
 
 // Public event handlers
 // ---------------------
@@ -249,7 +257,9 @@ function eventHandler_(config, arg) {
       // The arg is only defined for triggers - built-in or installable,
       // but we still need to tell the difference as they have different 
       // authority
-      
+
+console.log('arg %s', typeof arg)
+
       calledFromInstallableTrigger = arg.hasOwnProperty('triggerUid')
       Log_.fine('calledFromInstallableTrigger: ' + calledFromInstallableTrigger)
       
@@ -336,7 +346,7 @@ function eventHandler_(config, arg) {
 
 function onOpen_(event) {
 
-  console.log(SCRIPT_VERSION)
+//  console.log(SCRIPT_VERSION)
 
   if (TEST_FORCE_OPEN_ERROR) {
     throw new Error('Force onOpen() error for testing.')
