@@ -257,11 +257,11 @@ function eventHandler_(config, arg) {
       // The arg is only defined for triggers - built-in or installable,
       // but we still need to tell the difference as they have different 
       // authority
-      
-      calledFromInstallableTrigger = arg.hasOwnProperty('triggerUid')
+
+      calledFromInstallableTrigger = arg.triggerUid !== undefined
       Log_.fine('calledFromInstallableTrigger: ' + calledFromInstallableTrigger)
       
-      if (arg.hasOwnProperty('authMode')) {
+      if (arg.authMode !== undefined) {
       
         Log_.fine('arg.authMode: ' + JSON.stringify(arg.authMode))
         
