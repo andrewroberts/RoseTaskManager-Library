@@ -258,12 +258,10 @@ function eventHandler_(config, arg) {
       // but we still need to tell the difference as they have different 
       // authority
 
-console.log('arg %s', typeof arg)
-
-      calledFromInstallableTrigger = arg.hasOwnProperty('triggerUid')
+      calledFromInstallableTrigger = arg.triggerUid !== undefined
       Log_.fine('calledFromInstallableTrigger: ' + calledFromInstallableTrigger)
       
-      if (arg.hasOwnProperty('authMode')) {
+      if (arg.authMode !== undefined) {
       
         Log_.fine('arg.authMode: ' + JSON.stringify(arg.authMode))
         
