@@ -168,7 +168,7 @@ function eventHandler_(config, arg) {
 
     Log_ = getLog()
 
-    var userEmail = Session.getActiveUser().getEmail()
+    var userEmail = Session.getEffectiveUser().getEmail()
 
     // Comment this out as it runs too often on all the calendar checks
 //    Log_.info('Handling ' + config[0] + ' from ' + userEmail)
@@ -243,7 +243,7 @@ function eventHandler_(config, arg) {
     
     var sendErrorEmail               = false
     var calledFromInstallableTrigger = false
-    var adminEmailAddress            = DEV_EMAIL_ADDRESS
+    var adminEmailAddress
     
     if (typeof arg === 'undefined') {
     
@@ -258,24 +258,21 @@ function eventHandler_(config, arg) {
       // but we still need to tell the difference as they have different 
       // authority
 
-console.log('arg %s', typeof arg)
-
-      calledFromInstallableTrigger = arg.hasOwnProperty('triggerUid')
+      calledFromInstallableTrigger = arg.triggerUid !== undefined
       Log_.fine('calledFromInstallableTrigger: ' + calledFromInstallableTrigger)
       
-      if (arg.hasOwnProperty('authMode')) {
+      if (arg.authMode !== undefined) {
       
         Log_.fine('arg.authMode: ' + JSON.stringify(arg.authMode))
         
         if (arg.authMode === ScriptApp.AuthMode.FULL) {
         
           if (userEmail !== '' && typeof userEmail !== 'undefined') {
-            adminEmailAddress += ',' + userEmail
+            adminEmailAddress = userEmail
+            sendErrorEmail = true
+            Log_.fine('Error emails will sent to ' + adminEmailAddress)
           }
             
-          sendErrorEmail = true
-          Log_.fine('Error emails will sent to ' + adminEmailAddress)
-          
         } else {
         
           Log_.fine('Not sending error emails')
